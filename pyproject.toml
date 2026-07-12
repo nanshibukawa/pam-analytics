@@ -1,0 +1,44 @@
+[project]
+name = "pam-analytics"
+version = "0.1.0"
+description = "Plataforma analítica para clusterização agrícola do Paraná"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "requests>=2.31.0",
+    "pandas>=2.2.0",
+    "pyarrow>=15.0.0",
+    "numpy>=1.26.0",
+    "scikit-learn>=1.4.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "streamlit>=1.31.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.3.0",
+    "pytest>=8.0.0",
+]
+
+[tool.ruff]
+# Versão do Python suportada
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+# Regras selecionadas:
+# E/W: pycodestyle (estilo do código PEP 8)
+# F: Pyflakes (erros de lógica/sintaxe comuns)
+# I: isort (organização de imports)
+# B: flake8-bugbear (bugs comuns)
+# C90: mccabe (complexidade ciclomática do código)
+select = ["E", "F", "I", "W", "B", "C90", "N"]
+ignore = []
+
+[tool.ruff.format]
+# Usa aspas duplas por padrão (estilo Black)
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
