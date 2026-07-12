@@ -9,5 +9,8 @@ wheels/
 # Virtual environments
 .venv
 
+# Local data (do not commit raw/processed data)
+data/
+
 # Documentation and planning (Technical Challenge)
 project_roadmap.md

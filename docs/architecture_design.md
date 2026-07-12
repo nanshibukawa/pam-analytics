@@ -28,7 +28,7 @@ Para garantir manutenibilidade e separação de responsabilidades (SRP), o proje
 
 ### Decisão 2: Ingestão de Dados Fatiada por Cultura (Crop-Based Chunking)
 Para contornar o limite de 50.000 células, dividiremos as chamadas à API do SIDRA individualmente por produto agrícola.
-* Cada consulta requisitará 15 períodos (2010-2024), 399 municípios (Paraná) e 5 variáveis para **uma única cultura** (ex: Soja).
+* Cada consulta requisitará 15 períodos (2010-2024), 399 municípios (Paraná) e 5 variáveis para uma única cultura (ex: Soja).
 * O volume por chamada cai para **29.925 células**, garantindo que as chamadas fiquem dentro do limite de segurança da API.
 
 ### Decisão 3: Tratamento de Resiliência de Rede
@@ -49,3 +49,34 @@ As respostas brutas da API do SIDRA contêm nomes de variáveis (coluna `D2N`) p
   * Sem risco de estourar a cota de dados da API do SIDRA.
 * **Pontos a Considerar (Próximos Passos):**
   * À medida que avançarmos nas Fases 3 e 4, este documento será atualizado para refletir o design da Engenharia de Features (escalonamento, tratamento de outliers) e o isolamento espacial da modelagem de clusters.
+
+---
+
+## 4. Fluxo de Dados do Ecossistema
+
+O diagrama abaixo ilustra o ciclo de vida dos dados dentro da arquitetura proposta, destacando o desacoplamento entre as camadas através de arquivos e requisições HTTP locais:
+
+```mermaid
+graph TD
+    %% Nós Externos e Ingestão
+    IBGE[API Pública SIDRA IBGE] -- "Requisições HTTP Fatiadas (Crop Chunking)" --> Ingestion[src/ingestion]
+    
+    %% Camada de Dados
+    Ingestion -- "Tratamento de Nulos & Pivotagem D2C" --> ParquetRaw[(data/processed/pam_parana_clean.parquet)]
+    
+    %% Camada de Transformação e Modelagem
+    ParquetRaw --> Features[src/features]
+    Features -- "Estatísticas Históricas de Séries Temporais" --> Models[src/models]
+    Models -- "RobustScaler + Treinamento por Cultura" --> ParquetFinal[(data/processed/clusters_final.parquet)]
+    
+    %% Camada de Aplicação e Consumo
+    ParquetFinal --> API[src/api - FastAPI Backend]
+    API -- "Endpoints REST (JSON / Pydantic)" --> Dashboard[src/dashboard - Streamlit Frontend]
+    
+    %% Estilização para clareza visual e acessibilidade
+    style IBGE fill:#f9f9f9,stroke:#333,stroke-width:2px,color:#000
+    style ParquetRaw fill:#e1f5fe,stroke:#01579b,stroke-width:1px,color:#000
+    style ParquetFinal fill:#e1f5fe,stroke:#01579b,stroke-width:1px,color:#000
+    style API fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
+    style Dashboard fill:#efebe9,stroke:#3e2723,stroke-width:2px,color:#000
+```
