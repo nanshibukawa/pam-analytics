@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Documentation and planning (Technical Challenge)
+project_roadmap.md
