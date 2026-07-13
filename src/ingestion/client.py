@@ -19,9 +19,9 @@ class SidraClient:
             raise_on_status=False,  # Se todas as tentativas falharem, não lança exceção, permitindo tratamento manual.
         )
 
-        adapter = HTTPAdapter(max_retries=retries) # type: ignore
-        self.session.mount("https://",adapter)
-        self.session.mount("http://",adapter)
+        adapter = HTTPAdapter(max_retries=retries)  # type: ignore
+        self.session.mount("https://", adapter)
+        self.session.mount("http://", adapter)
 
     def fetch_raw_data(self, query_path: str) -> list[dict]:
         """
