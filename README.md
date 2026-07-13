@@ -24,6 +24,24 @@ pam-analytics/
 
 ---
 
+## 📖 Dicionário de Dados (Esquema da Base Processada)
+
+A base de dados final consolidada e salva em formato **Parquet** (`data/processed/pam_parana_consolidado.parquet`) possui o seguinte esquema:
+
+| Nome da Coluna | Tipo de Dado | Origem (Código IBGE) | Descrição Física / Unidade de Medida |
+| :--- | :--- | :--- | :--- |
+| **`municipio_codigo`** | `int64` | `D3C` | Código identificador único de 7 dígitos do IBGE para o município. |
+| **`municipio_nome`** | `string` | `D3N` | Nome do município acompanhado da sigla da UF (ex: `"Abatiá - PR"`). |
+| **`ano`** | `int64` | `D1N` | Ano correspondente à colheita da safra (faixa: 2010 a 2024). |
+| **`produto`** | `string` | Derivado de `D4N` (ex: `"Soja (em grão)"` ➡️ `"soja"`) | Cultura agrícola mapeada (valores: `soja`, `milho` ou `trigo`). |
+| **`area_plantada`** | `float64` | `8331` | Área total destinada ao plantio em **Hectares (ha)**. |
+| **`area_colhida`** | `float64` | `216` | Área efetivamente colhida em **Hectares (ha)**. |
+| **`quantidade_produzida`**| `float64` | `214` | Volume total colhido e produzido em **Toneladas (t)**. |
+| **`rendimento_medio`** | `float64` | `112` | Produtividade média da terra expressa em **Quilogramas por Hectare (kg/ha)**. |
+| **`valor_producao`** | `float64` | `215` | Valor monetário bruto da produção em **Milhares de Reais (R$ 1.000)**. |
+
+---
+
 ## 📅 Planejamento de Desenvolvimento & Cronograma
 
 Para garantir uma entrega organizada e modularizada até a data limite (**20/07/2026**), o desenvolvimento foi dividido em fases incrementais com entregáveis diários claros:
@@ -65,7 +83,7 @@ graph TD
 
 Acompanhamento do progresso das atividades para a entrega final:
 
-- [ ] Finalizar o processamento e limpeza dos dados brutos do SIDRA para Parquet (Fase 2)
+- [x] Finalizar o processamento e limpeza dos dados brutos do SIDRA para Parquet (Fase 2)
 - [ ] Desenvolver o pipeline de engenharia de features temporais (Fase 3)
 - [ ] Implementar os modelos de agrupamento não supervisionado por cultura (Fase 4)
 - [ ] Criar os endpoints da API com FastAPI e esquemas Pydantic (Fase 5)

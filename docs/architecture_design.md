@@ -36,9 +36,7 @@ A classe cliente de conexão com a API (`SidraClient`) implementará um mecanism
 
 ### Decisão 4: Mapeamento e Pivotagem via Códigos Imutáveis (`D2C`)
 As respostas brutas da API do SIDRA contain nomes de variáveis (coluna `D2N`) propensos a alterações textuais e encoding inconsistente.
-* A higienização e pivotagem dos dados serão feitas utilizando os **códigos numéricos das variáveis** (coluna `D2C`, ex: `"8331"` para Área Plantada).
-* Isso garante que alterações de grafia ou acentuação feitas pelo IBGE não quebrem o pipeline de dados.
-* **Mapeamento Dinâmico (SRP):** Para evitar acoplamento e duplicação de constantes, os nomes amigáveis das colunas no Pandas são gerados dinamicamente em runtime a partir do Enum de variáveis: `{v.value: v.name.lower() for v in SidraVariables}`.
+* **Mapeamento Dinâmico (SRP):** Para evitar acoplamento e duplicação de constantes, os nomes amigáveis das colunas no Pandas são gerados dinamicamente em runtime a partir do Enum de variáveis: `{v.value: v.name.lower() for v in SidraVariables}`. Como referência de implementação, consulte o módulo [sidra_mapping.py](../src/ingestion/sidra_mapping.py).
 
 ### 🔍 Auditoria de Identificadores do IBGE
 Os códigos numéricos das variáveis (`D2C`) e produtos (`D4C`) mapeados neste projeto foram extraídos diretamente dos metadados oficiais da Tabela 5457 do IBGE. 
@@ -94,3 +92,16 @@ graph TD
     style API fill:#f3e5f5,stroke:#4a148c,stroke-width:2px,color:#000
     style Dashboard fill:#efebe9,stroke:#3e2723,stroke-width:2px,color:#000
 ```
+
+---
+
+## 5. Documentação de Detalhamento por Fase
+
+Para guias passo a passo, blueprints de implementação e roteiros de defesa específicos de cada etapa, consulte os documentos dedicados na pasta `docs/`:
+
+1. **Ingestão & Processamento (Fase 2):** [fase2_ingestao.md](fase2_ingestao.md) — Sanitização de dados, tipos numéricos e importância da pivotagem.
+2. **Features Temporais (Fase 3):** [fase3_features.md](fase3_features.md) — CAGR, volatilidade e tendências.
+3. **Modelagem (Fase 4):** [fase4_modelagem.md](fase4_modelagem.md) — RobustScaler e clusterização não supervisionada por cultura.
+4. **API Rest (Fase 5):** [fase5_api.md](fase5_api.md) — FastAPI e esquemas de validação Pydantic.
+5. **Dashboard Streamlit (Fase 6):** [fase6_dashboard.md](fase6_dashboard.md) — Interface de visualização desacoplada do backend.
+6. **Docker (Fase 7):** [fase7_docker.md](fase7_docker.md) — Dockerfiles e orquestração via Compose.
