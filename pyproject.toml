@@ -45,6 +45,8 @@ line-ending = "auto"
 
 [tool.pyright]
 extraPaths = ["."]
+venvPath = "."
+venv = ".venv"
 
 [tool.setuptools]
 package-dir = {"" = "."}
