@@ -58,3 +58,20 @@ graph TD
 | **Fase 6: Dashboard** | 17/07 | Desenvolvimento do front-end em Streamlit para visualizações interativas de gráficos e mapas, consumindo exclusivamente os endpoints da API. | Dashboard rodando localmente na porta `8501`. |
 | **Fase 7: Docker** | 18/07 | Containerização da API e do Dashboard em Dockerfiles dedicados e orquestração do ecossistema via Docker Compose. | Sistema completo inicializável com `docker compose up`. |
 | **Polimento & Testes** | 19/07 | Revisão geral do código com Ruff, escrita de testes automatizados e refinamento da documentação técnica para entrega. | Repositório pronto para avaliação final. |
+
+---
+
+## 📝 Lista de Tarefas (TODO)
+
+Acompanhamento do progresso das atividades para a entrega final:
+
+- [ ] Finalizar o processamento e limpeza dos dados brutos do SIDRA para Parquet (Fase 2)
+- [ ] Desenvolver o pipeline de engenharia de features temporais (Fase 3)
+- [ ] Implementar os modelos de agrupamento não supervisionado por cultura (Fase 4)
+- [ ] Criar os endpoints da API com FastAPI e esquemas Pydantic (Fase 5)
+- [ ] Construir o dashboard interativo com Streamlit consumindo a API (Fase 6)
+- [ ] Configurar os Dockerfiles e orquestração via Docker Compose (Fase 7)
+- [ ] Rodar testes unitários e validações finais de estilo com `Ruff` e `Pyright`
+- [ ] Atualizar a versão do projeto para `1.0.0` no `pyproject.toml` (especificação [SemVer](https://semver.org/lang/pt-BR/))
+- [ ] Gerar a tag de entrega estável `v1.0.0` no Git (`git tag v1.0.0`)
+
