@@ -35,11 +35,25 @@ Para contornar o limite de 50.000 células, dividiremos as chamadas à API do SI
 A classe cliente de conexão com a API (`SidraClient`) implementará um mecanismo de **retries com backoff exponencial** (atraso crescente entre tentativas). Isso evita que oscilações momentâneas de rede do IBGE interrompam a execução do pipeline de dados.
 
 ### Decisão 4: Mapeamento e Pivotagem via Códigos Imutáveis (`D2C`)
-As respostas brutas da API do SIDRA contêm nomes de variáveis (coluna `D2N`) propensos a alterações textuais e encoding inconsistente.
+As respostas brutas da API do SIDRA contain nomes de variáveis (coluna `D2N`) propensos a alterações textuais e encoding inconsistente.
 * A higienização e pivotagem dos dados serão feitas utilizando os **códigos numéricos das variáveis** (coluna `D2C`, ex: `"8331"` para Área Plantada).
 * Isso garante que alterações de grafia ou acentuação feitas pelo IBGE não quebrem o pipeline de dados.
+* **Mapeamento Dinâmico (SRP):** Para evitar acoplamento e duplicação de constantes, os nomes amigáveis das colunas no Pandas são gerados dinamicamente em runtime a partir do Enum de variáveis: `{v.value: v.name.lower() for v in SidraVariables}`.
+
+### 🔍 Auditoria de Identificadores do IBGE
+Os códigos numéricos das variáveis (`D2C`) e produtos (`D4C`) mapeados neste projeto foram extraídos diretamente dos metadados oficiais da Tabela 5457 do IBGE. 
+
+Para replicar ou auditar a lista completa de identificadores via interface gráfica:
+1. Acesse o painel da tabela: [SIDRA Tabela 5457](https://sidra.ibge.gov.br/tabela/5457).
+2. Na barra flutuante inferior azul, clique no ícone de engrenagem (**Opções Avançadas**).
+3. No menu "Utilidades diversas", selecione **Listar identificadores**.
+
+### Decisão 5: Ingestão Síncrona vs. Assíncrona (Pragmatismo sobre Overengineering)
+* **Abordagem:** Utilizaremos o consumo síncrono clássico através da biblioteca `requests` em detrimento de paralelismo assíncrono (com `httpx` ou `asyncio`).
+* **Racional:** Como a rotina de coleta realiza apenas 3 requisições (soja, milho e trigo) para dados consolidados anualmente, a concorrência assíncrona traria uma complexidade adicional de desenvolvimento sem qualquer ganho de performance prático relevante. Priorizou-se o princípio KISS (Keep It Simple, Stupid) para a construção do MVP.
 
 ---
+
 
 ## 3. Consequências e Implicações
 

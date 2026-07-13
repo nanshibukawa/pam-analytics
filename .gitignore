@@ -12,5 +12,8 @@ wheels/
 # Local data (do not commit raw/processed data)
 data/
 
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
 # Documentation and planning (Technical Challenge)
 project_roadmap.md
