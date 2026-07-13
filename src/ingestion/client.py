@@ -2,13 +2,26 @@
 import requests
 from src.utils.logging_config import setup_logging
 from src.ingestion.sidra_mapping import BASE_URL_API_SIDRA
+from urllib3.util import Retry
+from requests.adapters import HTTPAdapter
 
 logger = setup_logging()
 
 class SidraClient:
     
-    def __init__(self, timeout: int = 60):
+    def __init__(self, timeout: int = 60, max_retries: int = 5):
         self.timeout = timeout
+        self.session = requests.Session()
+
+        retries = Retry(
+            total=max_retries,
+            backoff_factor = 1, # wait 1s, 2s, 4s, 8s, 16s between retries
+            status_forcelist=[500, 501, 503, 504], # Erros derivados do servidor
+            raise_on_status=False # Se todas as tentativas falharem, não lança exceção, permitindo tratamento manual.
+        )
+
+        self.session.mount('http://', HTTPAdapter(max_retries=retries))  # type: ignore
+        
 
     def fetch_raw_data(self, query_path: str) -> list[dict]:
         """
@@ -30,7 +43,7 @@ class SidraClient:
         logger.info(f"Fazendo requisição GET para a API: {url}")
 
         try:
-            response = requests.get(url, timeout=self.timeout)
+            response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
             return response.json()
 

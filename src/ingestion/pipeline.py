@@ -1,12 +1,11 @@
 """Pipeline de Ingestão e Tratamento de dados agrícolas da API SIDRA."""
 
-import os
-import json
-import logging
-from pathlib import Path
-import pandas as pd
-import numpy as np
 
+import json
+
+from pathlib import Path
+
+from src.utils.logging_config import setup_logging
 from src.ingestion.client import SidraClient
 
 from src.ingestion.sidra_mapping import (
@@ -18,7 +17,7 @@ from src.ingestion.sidra_mapping import (
 )
 
 
-logger = logging.getLogger(__name__)
+logger = setup_logging()
 
 class IngestionPipeline:
     """Orquestrador que gerencia o download dos dados brutos e o processamento final."""
@@ -78,8 +77,6 @@ if __name__ == "__main__":
     # Resolve a raiz do projeto (sobe 3 níveis a partir de src/ingestion/pipeline.py)
     base_path = Path(__file__).resolve().parent.parent.parent
     sys.path.append(str(base_path))
-    
-    from src.utils.logging_config import setup_logging
     
     setup_logging()
     
