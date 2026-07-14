@@ -4,6 +4,15 @@ from enum import Enum
 
 BASE_URL_API_SIDRA = "https://apisidra.ibge.gov.br/values"
 
+SIDRA_RENAME_MAP = {
+    "D1N": "ano",
+    "D2C": "variavel_codigo",
+    "D3C": "municipio_codigo",
+    "D3N": "municipio_nome",
+    "V": "valor",
+}
+
+
 
 class SidraCrops(Enum):
     """Culturas agrícolas solicitadas pelo escopo do projeto."""
