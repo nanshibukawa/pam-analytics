@@ -12,6 +12,7 @@ from src.ingestion.sidra_mapping import (
     SidraPeriod,
     SidraLocality,
     SidraVariables,
+    SIDRA_RENAME_MAP,
 )
 
 logger = setup_logging()
@@ -73,16 +74,16 @@ class IngestionPipeline:
                 continue
 
             try:
-                df = pd.read_json(file_path).iloc[1:]
+                df = pd.read_json(file_path)
 
-                rename_map = {
-                    "D1N": "ano",
-                    "D2C": "variavel_codigo",
-                    "D3C": "municipio_codigo",
-                    "D3N": "municipio_nome",
-                    "V": "valor",
-                }
-                df_2 = df[rename_map.keys()].rename(columns=rename_map)
+                if df.empty or not all(col in df.columns for col in SIDRA_RENAME_MAP.keys()):
+                    logger.warning(f"Arquivo {file_path} está vazio ou inválido. Pulando.")
+                    continue
+
+                df = df.iloc[1:]
+
+
+                df_2 = df[list(SIDRA_RENAME_MAP.keys())].rename(columns=SIDRA_RENAME_MAP)
 
                 # Sanitização defensiva completa de caracteres especiais do IBGE
                 df_2["valor"] = df_2["valor"].replace(
@@ -96,8 +97,8 @@ class IngestionPipeline:
                 )
 
                 df_2["valor"] = pd.to_numeric(df_2["valor"], errors="coerce")
-                df_2["ano"] = df_2["ano"].astype(int)
-                df_2["municipio_codigo"] = df_2["municipio_codigo"].astype(int)
+                df_2["ano"] = pd.to_numeric(df_2["ano"], errors="coerce").astype("Int64")
+                df_2["municipio_codigo"] = pd.to_numeric(df_2["municipio_codigo"], errors="coerce").astype("Int64")
 
                 # Pivotagem para transformar de Formato Longo para Largo
                 df_pivot = df_2.pivot_table(
@@ -143,6 +144,10 @@ class IngestionPipeline:
         # 2. Processar os dados brutos
         logger.info("Processando os dados brutos...")
         df = self.process_raw_data()
+
+        if df.empty:
+            logger.warning("Nenhum dado processado. Abortando pipeline.")
+            return
         logger.info("Processamento dos dados brutos finalizado com sucesso!")
 
         # 3. Salvar o parquet de saída
