@@ -86,6 +86,7 @@ Acompanhamento do progresso das atividades para a entrega final:
 - [x] Finalizar o processamento e limpeza dos dados brutos do SIDRA para Parquet (Fase 2)
 - [ ] Otimizar download no `pipeline.py`: evitar download redundante se os arquivos brutos já existirem no disco, criando uma flag (ex: `--force` ou `--download`) para forçar a atualização
 - [ ] Desenvolver o pipeline de engenharia de features temporais (Fase 3)
+- [ ] Implementar a etapa de normalização dos dados/features (RobustScaler)
 - [ ] Implementar os modelos de agrupamento não supervisionado por cultura (Fase 4)
 - [ ] Criar os endpoints da API com FastAPI e esquemas Pydantic (Fase 5)
 - [ ] Construir o dashboard interativo com Streamlit consumindo a API (Fase 6)
