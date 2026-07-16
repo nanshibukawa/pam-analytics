@@ -6,7 +6,7 @@ BASE_URL_API_SIDRA = "https://apisidra.ibge.gov.br/values"
 
 # Mapeamento para renomeação de colunas da API SIDRA.
 # NOTA: D4C e D4N são mantidos aqui para garantir a validação de contrato (esquema) do JSON bruto,
-# embora o pipeline opte por preencher a coluna final 'produto' de forma simplificada pós-pivotagem.
+# embora o pipeline preencha a coluna 'produto' de forma simplificada utilizando o 'crop_name' pós-pivotagem.
 SIDRA_RENAME_MAP = {
     "D1N": "ano",
     "D2C": "variavel_codigo",

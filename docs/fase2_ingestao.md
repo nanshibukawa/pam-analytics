@@ -54,7 +54,51 @@ A API do SIDRA retorna os dados originalmente no **Formato Longo** (onde as vari
 #### **Por que essa transformação é obrigatória?**
 1. **Cálculos entre Variáveis (Engenharia de Features):** No formato longo, métricas como Área Plantada e Área Colhida ficam em linhas distintas, inviabilizando subtrações diretas no Pandas. Com a pivotagem, elas viram colunas na mesma linha, permitindo cálculos simples como `df['perda'] = df['area_plantada'] - df['area_colhida']`.
 2. **Entrada de Algoritmos (Machine Learning):** Modelos de clusterização (como K-Means ou K-Medoids) exigem matrizes de dados estruturadas onde **cada linha representa uma observação única** (município + ano) e **cada coluna representa uma feature** (característica).
-3. **Consumo Simplificado pela API e Dashboard:** Permite que os endpoints retornem séries completas e estruturadas em um único registro JSON por ano, otimizando o fluxo de dados.
+3. **Consumo Simplificado pela API e Dashboard:** Permite que os endpoints retornem séries completas e estruturadas em unificado registro JSON por ano, otimizando o fluxo de dados.
+
+### 4. Estrutura da Resposta Bruta da API SIDRA
+Para fins de auditoria e entendimento da origem das colunas nativas do IBGE, o payload JSON retornado pela API do SIDRA segue a seguinte estrutura (exemplo real de consulta para Soja):
+
+* **URL de Consulta:** `https://apisidra.ibge.gov.br/values/t/5457/p/2010-2024/v/8331,216,214,112,215/n6/in%20n3%2041/c782/40124`
+* **Exemplo do Layout JSON (Metadados + Primeiro Registro):**
+```json
+[
+    {
+        "NC": "Nível Territorial (Código)",
+        "NN": "Nível Territorial",
+        "MC": "Unidade de Medida (Código)",
+        "MN": "Unidade de Medida",
+        "V": "Valor",
+        "D1C": "Ano (Código)",
+        "D1N": "Ano",
+        "D2C": "Variável (Código)",
+        "D2N": "Variável",
+        "D3C": "Município (Código)",
+        "D3N": "Município",
+        "D4C": "Produto das lavouras temporárias e permanentes (Código)",
+        "D4N": "Produto das lavouras temporárias e permanentes"
+    },
+    {
+        "NC": "6",
+        "NN": "Município",
+        "MC": "1006",
+        "MN": "Hectares",
+        "V": "6880",
+        "D1C": "2010",
+        "D1N": "2010",
+        "D2C": "8331",
+        "D2N": "Área plantada ou destinada à colheita",
+        "D3C": "4100103",
+        "D3N": "Abatiá - PR",
+        "D4C": "40124",
+        "D4N": "Soja (em grão)"
+    }
+]
+```
+
+> [!NOTE]
+> *   A primeira linha do JSON contém os metadados textuais explicativos de cada campo (por isso ela é descartada no Pandas com `.iloc[1:]`).
+> *   As chaves `"D4C"` e `"D4N"` representam as informações do produto agrícola que são validadas através do mapeamento do projeto para garantir a conformidade do esquema da API.
 
 ---
 
