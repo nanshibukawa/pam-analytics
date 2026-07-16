@@ -36,7 +36,7 @@ class FeatureBuilder:
         Utiliza o índice da série (ano) como variável independente.
         """
         y = series.astype(float).values
-        if len(y) < 2 or np.all(np.isnan(y)) or np.sum(y) == 0:
+        if len(y) < 2 or np.all(np.isnan(y)):
             return 0.0
 
         x = series.index.astype(float).values
@@ -47,6 +47,8 @@ class FeatureBuilder:
             return 0.0
 
         slope, _ = np.polyfit(x[mask], y[mask], 1)
+        # TODO: Avaliar normalização do Slope pela média (Slope / mean_val) para obter a taxa de
+        # crescimento linear relativo (decimal) e evitar distorções de megaprodutores no KMeans.
         return float(slope)
 
     def calculate_cagr(self, series: pd.Series) -> float:
@@ -54,8 +56,8 @@ class FeatureBuilder:
         Calcula a taxa de crescimento anual composta (CAGR) entre o primeiro e último ano
         com dados maiores que zero, usando o índice da série (ano) para o número de anos decorridos.
         """
-        # Filtra valores maiores que zero e remove NaNs
-        valid_series = series[series > 0].dropna()
+        # Filtra valores maiores que zero, remove NaNs e ordena pelo ano (índice)
+        valid_series = series[series > 0].dropna().sort_index()
         if len(valid_series) < 2:
             return 0.0
 
@@ -110,21 +112,20 @@ class FeatureBuilder:
         logger.info("Agrupando dados históricos por município + produto...")
         features_list = []
 
+        # Ordena o DataFrame por ano uma única vez para garantir a ordem cronológica nos grupos
+        df = df.sort_values("ano")
         grouped = df.groupby(["municipio_codigo", "municipio_nome", "produto"])
 
         for (m_cod, m_nome, prod), group in grouped:
-            # Ordena por ano para garantir integridade das séries temporais
-            group = group.sort_values("ano")
-
             # Média das variáveis físicas/financeiras (Escala)
             mean_prod = group["quantidade_produzida"].mean()
             mean_area = group["area_plantada"].mean()
             mean_yield = group["rendimento_medio"].mean()
             mean_value = group["valor_producao"].mean()
 
-            # Prepara séries com o ano como índice para os cálculos temporais
-            prod_series = group.set_index("ano")["quantidade_produzida"]
-            yield_series = group.set_index("ano")["rendimento_medio"]
+            # Prepara séries com o ano como índice para os cálculos temporais de forma eficiente
+            prod_series = pd.Series(group["quantidade_produzida"].values, index=group["ano"].values)
+            yield_series = pd.Series(group["rendimento_medio"].values, index=group["ano"].values)
 
             # Volatilidade (Coeficiente de Variação) da produção
             cv_prod = self.calculate_volatility(prod_series)
