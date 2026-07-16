@@ -1,0 +1,178 @@
+"""Pipeline de Engenharia de Features para séries temporais agrícolas."""
+
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+
+# Resolve a raiz do projeto e adiciona ao sys.path para imports absolutos
+BASE_PATH = Path(__file__).resolve().parent.parent.parent
+if str(BASE_PATH) not in sys.path:
+    sys.path.append(str(BASE_PATH))
+
+from src.utils.logging_config import setup_logging  # noqa: E402
+
+logger = setup_logging()
+
+
+class FeatureBuilder:
+    """Classe responsável por transformar séries temporais históricas em features analíticas
+
+    estáticas por Município + Cultura.
+    """
+
+    def __init__(self, processed_data_path: Path):
+        self.data_path = processed_data_path
+
+    def load_data(self) -> pd.DataFrame:
+        """Carrega a base consolidada Parquet."""
+        logger.info(f"Carregando dados consolidados de: {self.data_path}")
+        return pd.read_parquet(self.data_path)
+
+    def calculate_slope(self, series: pd.Series) -> float:
+        """
+        Calcula a inclinação linear da série histórica (Slope).
+        Utiliza o índice da série (ano) como variável independente.
+        """
+        y = series.astype(float).values
+        if len(y) < 2 or np.all(np.isnan(y)) or np.sum(y) == 0:
+            return 0.0
+
+        x = series.index.astype(float).values
+
+        # Remove eventuais nulos de X e Y
+        mask = ~np.isnan(y) & ~np.isnan(x)
+        if np.sum(mask) < 2:
+            return 0.0
+
+        slope, _ = np.polyfit(x[mask], y[mask], 1)
+        return float(slope)
+
+    def calculate_cagr(self, series: pd.Series) -> float:
+        """
+        Calcula a taxa de crescimento anual composta (CAGR) entre o primeiro e último ano
+        com dados maiores que zero, usando o índice da série (ano) para o número de anos decorridos.
+        """
+        # Filtra valores maiores que zero e remove NaNs
+        valid_series = series[series > 0].dropna()
+        if len(valid_series) < 2:
+            return 0.0
+
+        v_ini = valid_series.iloc[0]
+        v_fin = valid_series.iloc[-1]
+
+        y_ini = int(valid_series.index[0])
+        y_fin = int(valid_series.index[-1])
+
+        n_years = y_fin - y_ini
+
+        if n_years <= 0 or v_ini <= 0:
+            return 0.0
+
+        cagr = (v_fin / v_ini) ** (1.0 / n_years) - 1.0
+        return float(cagr)
+
+    def calculate_volatility(self, series: pd.Series) -> float:
+        """
+        Calcula o Coeficiente de Variação (CV) da série histórica.
+        Mantido em decimal (sem multiplicar por 100) para consistência no KMeans.
+        """
+        mean_val = series.mean()
+        if mean_val <= 0 or np.isnan(mean_val):
+            return 0.0
+
+        std_val = series.astype(float).std()
+        cv = std_val / mean_val
+
+        return 0.0 if np.isnan(cv) else float(cv)
+
+    def build_features(self) -> pd.DataFrame:
+        """Gera as features agregadas por município e cultura."""
+        df = self.load_data()
+
+        logger.info("Calculando Market Share e Risco Climático por ano...")
+
+        # 1. Calcular Market Share por ano e produto (com tratamento para divisão por zero)
+        df["total_prod_ano"] = df.groupby(["ano", "produto"])["quantidade_produzida"].transform("sum")
+        df["market_share"] = df["quantidade_produzida"] / df["total_prod_ano"].replace(0, np.nan)
+        # Evita quebrar o modelo caso houver Nan
+        df["market_share"] = df["market_share"].fillna(0.0)
+
+        # 2. Calcular Risco Climático (Perda de Área) por ano
+        # Evitar divisão por zero se area_plantada for zero
+        df["perda_area_pct"] = (df["area_plantada"] - df["area_colhida"]) / df["area_plantada"].replace(0, np.nan)
+        df["perda_area_pct"] = df["perda_area_pct"].fillna(0.0)
+        # Clip: todo numero negativo vira 0.0, evita inconsistencia da base
+        df["perda_area_pct"] = df["perda_area_pct"].clip(lower=0.0)
+
+        # 3. Agregações e Cálculos Temporais por Município + Produto
+        logger.info("Agrupando dados históricos por município + produto...")
+        features_list = []
+
+        grouped = df.groupby(["municipio_codigo", "municipio_nome", "produto"])
+
+        for (m_cod, m_nome, prod), group in grouped:
+            # Ordena por ano para garantir integridade das séries temporais
+            group = group.sort_values("ano")
+
+            # Média das variáveis físicas/financeiras (Escala)
+            mean_prod = group["quantidade_produzida"].mean()
+            mean_area = group["area_plantada"].mean()
+            mean_yield = group["rendimento_medio"].mean()
+            mean_value = group["valor_producao"].mean()
+
+            # Prepara séries com o ano como índice para os cálculos temporais
+            prod_series = group.set_index("ano")["quantidade_produzida"]
+            yield_series = group.set_index("ano")["rendimento_medio"]
+
+            # Volatilidade (Coeficiente de Variação) da produção
+            cv_prod = self.calculate_volatility(prod_series)
+
+            # CAGR e Slope
+            cagr_prod = self.calculate_cagr(prod_series)
+            cagr_yield = self.calculate_cagr(yield_series)
+            slope_prod = self.calculate_slope(prod_series)
+
+            # Médias de market share e perda de área
+            mean_market_share = group["market_share"].mean()
+            mean_area_loss = group["perda_area_pct"].mean()
+
+            features_list.append(
+                {
+                    "municipio_codigo": m_cod,
+                    "municipio_nome": m_nome,
+                    "produto": prod,
+                    "prod_media": mean_prod,
+                    "area_media": mean_area,
+                    "rendimento_medio_med": mean_yield,
+                    "valor_producao_medio": mean_value,
+                    "volatilidade_prod": cv_prod,
+                    "cagr_producao": cagr_prod,
+                    "cagr_rendimento": cagr_yield,
+                    "trend_slope_producao": slope_prod,
+                    "market_share_medio": mean_market_share,
+                    "perda_area_media": mean_area_loss,
+                }
+            )
+
+        df_features = pd.DataFrame(features_list)
+        logger.info(f"Feature engineering finalizado. Total de registros gerados: {len(df_features)}")
+        return df_features
+
+    def run(self) -> Path:
+        """Executa o pipeline de features completo e salva em arquivo Parquet."""
+        df_features = self.build_features()
+
+        output_path = self.data_path.parent / "pam_parana_features.parquet"
+        logger.info(f"Salvando features consolidadas em: {output_path}")
+        df_features.to_parquet(output_path, index=False, engine="pyarrow")
+        logger.info("Execução da Engenharia de Features concluída com sucesso!")
+        return output_path
+
+
+if __name__ == "__main__":
+    setup_logging()
+    processed_path = BASE_PATH / "data" / "processed" / "pam_parana_consolidado.parquet"
+    builder = FeatureBuilder(processed_path)
+    builder.run()
