@@ -4,14 +4,18 @@ from enum import Enum
 
 BASE_URL_API_SIDRA = "https://apisidra.ibge.gov.br/values"
 
+# Mapeamento para renomeação de colunas da API SIDRA.
+# NOTA: D4C e D4N são mantidos aqui para garantir a validação de contrato (esquema) do JSON bruto,
+# embora o pipeline opte por preencher a coluna final 'produto' de forma simplificada pós-pivotagem.
 SIDRA_RENAME_MAP = {
     "D1N": "ano",
     "D2C": "variavel_codigo",
     "D3C": "municipio_codigo",
     "D3N": "municipio_nome",
+    "D4C": "cultura_codigo",
+    "D4N": "cultura_nome",
     "V": "valor",
 }
-
 
 
 class SidraCrops(Enum):
