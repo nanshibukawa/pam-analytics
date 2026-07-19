@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 # Instala o uv para gerenciamento rápido e otimizado de dependências
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /uvx /bin/
 
 # Define o diretório de trabalho dentro do container
 WORKDIR /app
@@ -27,5 +27,5 @@ ENV STREAMLIT_SERVER_HEADLESS=true
 ENV STREAMLIT_BROWSER_GATHER_USAGE_STATS=false
 ENV PYTHONPATH=/app
 
-# Executa o dashboard Streamlit por meio do uv
-CMD ["uv", "run", "streamlit", "run", "src/dashboard/app.py", "--server.port", "8501", "--server.headless", "true"]
+# Executa o dashboard Streamlit diretamente do ambiente virtual (evita overhead do uv run e garante signal handling correto)
+CMD ["/app/.venv/bin/streamlit", "run", "src/dashboard/app.py", "--server.port", "8501", "--server.headless", "true"]

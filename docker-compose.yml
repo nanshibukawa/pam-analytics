@@ -13,10 +13,10 @@ services:
       - ./data:/app/data
       # Montagem do código fonte local para permitir hot-reload
       - ./src:/app/src
-    command: ["uv", "run", "python", "src/api/main.py"]
+    command: ["/app/.venv/bin/python", "src/api/main.py"]
     healthcheck:
       # Utiliza python nativo no container slim para fazer a verificação HTTP sem necessitar de curl ou wget
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
       interval: 5s
       timeout: 5s
       retries: 5

@@ -1,7 +1,7 @@
 FROM python:3.12-slim
 
 # Instala o uv para gerenciamento rápido e otimizado de dependências
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+COPY --from=ghcr.io/astral-sh/uv:0.11 /uv /uvx /bin/
 
 # Define o diretório de trabalho dentro do container
 WORKDIR /app
@@ -24,5 +24,5 @@ ENV PYTHONPATH=/app
 # Expõe a porta padrão do FastAPI
 EXPOSE 8000
 
-# Executa o servidor ASGI uvicorn por meio do uv
-CMD ["uv", "run", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Executa o servidor ASGI uvicorn diretamente do ambiente virtual (evita overhead do uv run e garante signal handling correto)
+CMD ["/app/.venv/bin/uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
