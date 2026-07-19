@@ -97,7 +97,7 @@ graph TD
 
 ## 5. Documentação de Detalhamento por Fase
 
-Para guias passo a passo, blueprints de implementação e roteiros de defesa específicos de cada etapa, consulte os documentos dedicados na pasta `docs/`:
+Para especificações técnicas, detalhes de modelagem e guias de implementação de cada etapa, consulte os documentos dedicados na pasta `docs/`:
 
 1. **Ingestão & Processamento (Fase 2):** [fase2_ingestao.md](fase2_ingestao.md) — Sanitização de dados, tipos numéricos e importância da pivotagem.
 2. **Features Temporais (Fase 3):** [fase3_features.md](fase3_features.md) — CAGR, volatilidade e tendências.
