@@ -13,23 +13,49 @@ CLUSTERS_PATH = BASE_DIR / "data" / "processed" / "clusters_final.parquet"
 data_store = {}
 
 def load_data_to_store():
-    """Carrega os arquivos Parquet em memória no startup do servidor."""
+    """Carrega os arquivos Parquet de produção para a memória cache do servidor.
+
+    Executa a leitura única dos arquivos no startup do app. Implementa o princípio
+    Fail-Fast, lançando exceção caso as bases necessárias não estejam no disco.
+
+    Raises:
+        FileNotFoundError: Se algum dos arquivos de dados esperados não for encontrado.
+    """
     logger.info("Iniciando carregamento de dados em memória...")
 
     if not CONSOLIDADO_PATH.exists():
-       raise FileNotFoundError(f"Arquivo histórico consolidado não encontrado em: {CONSOLIDADO_PATH}")
-        
+        raise FileNotFoundError(f"Arquivo histórico consolidado não encontrado em: {CONSOLIDADO_PATH}")
+
     if not CLUSTERS_PATH.exists():
         raise FileNotFoundError(f"Arquivo final de clusters não encontrado em: {CLUSTERS_PATH}")
 
-
     logger.info(f"Carregando histórico de: {CONSOLIDADO_PATH}")
-    data_store["consolidado"] = pd.read_parquet(CONSOLIDADO_PATH)
+    df_consolidado = pd.read_parquet(CONSOLIDADO_PATH)
+    data_store["consolidado"] = df_consolidado
 
     logger.info(f"Carregando clusters de: {CLUSTERS_PATH}")
-    data_store["clusters"] = pd.read_parquet(CLUSTERS_PATH)
+    df_clusters = pd.read_parquet(CLUSTERS_PATH)
+    data_store["clusters"] = df_clusters
 
-    logger.info("Carregamento concluído com sucesso!")
+    # Pré-computa metadados para O(1) no endpoint /metadata e validação rápida
+    produtos = sorted(df_consolidado["produto"].dropna().unique().tolist())
+    anos = sorted(df_consolidado["ano"].dropna().unique().tolist())
+
+    df_mun = df_consolidado[["municipio_codigo", "municipio_nome"]].dropna().drop_duplicates().sort_values("municipio_nome")
+    municipios = [
+        {"codigo": int(row["municipio_codigo"]), "nome": row["municipio_nome"]}
+        for _, row in df_mun.iterrows()
+    ]
+
+    data_store["metadata"] = {
+        "produtos": produtos,
+        "anos": anos,
+        "municipios": municipios
+    }
+    data_store["valid_produtos"] = set(produtos)
+    data_store["valid_anos"] = set(anos)
+
+    logger.info("Carregamento e pré-computação concluídos com sucesso!")
 
 def clear_data_store():
     """Limpa a memória do servidor."""
@@ -55,32 +81,21 @@ class DataService:
 
     @staticmethod
     def get_metadata() -> Dict[str, Any]:
-        """Obtém metadados da base histórica para preenchimento de filtros.                                                                                                                                                                               
-                                                                                                                                                                                                                                                              
-            Retorna as listas de culturas agrícolas, anos e municípios (código e nome)                                                                                                                                                                        
-            mapeados na base consolidada de produção.                                                                                                                                                                                                         
-                                                                                                                                                                                                                                                              
-            Returns:                                                                                                                                                                                                                                          
-                Dict[str, Any]: Dicionário contendo as listas de 'produtos', 'anos' e 'municipios'.                                                                                                                                                           
-  
-            Raises:
-                HTTPException: Se a base de dados histórica não estiver carregada em memória.
+        """Obtém metadados da base histórica para preenchimento de filtros.
+
+        Retorna as listas de culturas agrícolas, anos e municípios (código e nome)
+        mapeados na base consolidada de produção.
+
+        Returns:
+            Dict[str, Any]: Dicionário contendo as listas de 'produtos', 'anos' e 'municipios'.
+
+        Raises:
+            HTTPException: Se a base de dados histórica não estiver carregada em memória.
         """
-
-        df = data_store.get("consolidado")
-        if df is None or df.empty:
+        metadata = data_store.get("metadata")
+        if not metadata:
             raise HTTPException(status_code=404, detail="Dados históricos não carregados na API.")
-        
-        produtos = sorted(df["produto"].unique().tolist())
-        anos = sorted(df["ano"].unique().tolist())
-
-        # Mapeia todos os municípios existentes
-        df_municipio = df[["municipio_codigo", "municipio_nome"]].drop_duplicates().sort_values("municipio_nome")
-        municipios = [
-            {"codigo": int(row["municipio_codigo"]), "nome": row["municipio_nome"]} for _, row in df_municipio.iterrows()
-        ]
-
-        return {"produtos": produtos, "anos": anos, "municipios": municipios}
+        return metadata
 
 
     @staticmethod
@@ -120,56 +135,63 @@ class DataService:
 
     @staticmethod
     def get_ranking(produto: str, ano: int, metric: str) -> List[Dict[str, Any]]:
+        """Gera o ranking municipal ordenado com base no produto, ano e métrica escolhidos.
 
-        """Gera o ranking municipal ordenado com base no produto, ano e métrica escolhidos.                                                                                                                   
-                                                                                                                                                                                                                    
-                Filtra a base consolidada de produção para a cultura e a safra informadas,                                                                                                                            
-                ordena os resultados em ordem decrescente pela métrica selecionada e calcula                                                                                                                          
-                a posição ordinal de cada município (1-indexed).                                                                                                                                                      
-                                                                                                                                                                                                                    
-                Args:                                                                                                                                                                                                 
-                    produto (str): Cultura agrícola a ser ranqueada (soja, milho, trigo).                                                                                                                             
-                    ano (int): Ano da safra analisada.                                                                                                                                                                
-                    metric (str): Coluna numérica usada para ordenação (quantidade_produzida,                                                                                                                         
-                        area_plantada, area_colhida, rendimento_medio, valor_producao).                                                                                                                               
-                                                                                                                                                                                                                    
-                Returns:                                                                                                                                                                                              
-                    List[Dict[str, Any]]: Lista de dicionários representando o ranking ordenado,                                                                                                                      
-                        contendo as chaves 'posicao', 'municipio_codigo', 'municipio_nome'                                                                                                                            
-                        e 'valor_metrica'.                                                                                                                                                                            
-    
-                Raises:
-                    HTTPException: Se a base consolidada não estiver carregada em memória (404) 
-                        ou se a métrica fornecida for inválida (400).
+        Filtra a base consolidada de produção para a cultura e a safra informadas,
+        ordena os resultados em ordem decrescente pela métrica selecionada e calcula
+        a posição ordinal de cada município (1-indexed).
+
+        Args:
+            produto (str): Cultura agrícola a ser ranqueada (soja, milho, trigo).
+            ano (int): Ano da safra analisada.
+            metric (str): Coluna numérica usada para ordenação (quantidade_produzida,
+                area_plantada, area_colhida, rendimento_medio, valor_producao).
+
+        Returns:
+            List[Dict[str, Any]]: Lista de dicionários representando o ranking ordenado,
+                contendo as chaves 'posicao', 'municipio_codigo', 'municipio_nome'
+                e 'valor_metrica'.
+
+        Raises:
+            HTTPException: Se a base consolidada não estiver carregada em memória (404)
+                ou se a métrica, produto ou ano fornecidos forem inválidos (400).
         """
-
         df = data_store.get("consolidado")
         if df is None or df.empty:
             raise HTTPException(status_code=404, detail="Dados históricos não carregados na API.")
 
         valid_metrics = ["quantidade_produzida", "area_plantada", "area_colhida", "rendimento_medio", "valor_producao"]
-    
+
         metric_clean = metric.lower().strip()
         if metric_clean not in valid_metrics:
             raise HTTPException(status_code=400, detail=f"Métrica inválida. Escolha entre: {', '.join(valid_metrics)}")
-    
+
         produto_clean = produto.lower().strip()
+        if "valid_produtos" in data_store and produto_clean not in data_store["valid_produtos"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Produto inválido: '{produto}'. Escolha entre: {', '.join(sorted(data_store['valid_produtos']))}"
+            )
+
+        if "valid_anos" in data_store and ano not in data_store["valid_anos"]:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Ano inválido: {ano}. Escolha entre: {', '.join(map(str, sorted(data_store['valid_anos'])))}"
+            )
+
         df_filtered = df[(df["produto"] == produto_clean) & (df["ano"] == ano)].copy()
         if df_filtered.empty:
             return []
-        
+
         df_filtered = df_filtered.sort_values(by=metric_clean, ascending=False).reset_index(drop=True)
         df_filtered = df_filtered.fillna(0.0)
 
-        ranking_list = []
-        for idx, row in df_filtered.iterrows():
-            ranking_list.append({
-                "posicao": idx+1,
-                "municipio_codigo": int(row["municipio_codigo"]),
-                "municipio_nome": row["municipio_nome"],
-                "valor_metrica": float(row[metric_clean])
-            })
-        return ranking_list
+        # Vetorização do Pandas para evitar iterrows() lento
+        df_filtered["posicao"] = df_filtered.index + 1
+        df_filtered["valor_metrica"] = df_filtered[metric_clean].astype(float)
+        df_filtered["municipio_codigo"] = df_filtered["municipio_codigo"].astype(int)
+
+        return df_filtered[["posicao", "municipio_codigo", "municipio_nome", "valor_metrica"]].to_dict(orient="records")
 
     @staticmethod
     def get_clusters(produto: str) -> Dict[str, Any]:
@@ -212,4 +234,4 @@ class DataService:
         df_profiles = df_filtered.groupby("cluster")[feature_cols].mean().reset_index()
         profiles_list = df_profiles.to_dict(orient="records")
 
-        return {"clusters": clusters_list, "perfis": profiles_list}  
+        return {"clusters": clusters_list, "profiles": profiles_list}  

@@ -1,4 +1,3 @@
-from ast import Dict
 from typing import List, Optional
 from fastapi import APIRouter, Query
 from src.api.schemas import SeriesItem, RankingItem, ClustersResponse
@@ -8,9 +7,9 @@ router = APIRouter(tags=["Analytics"])
 
 @router.get("/series", response_model=List[SeriesItem])
 async def get_series(
+    produto: str = Query(..., description="Cultura agrícola (soja, milho, trigo)"),
     municipio_codigo: Optional[int] = Query(None, description="Filtrar por código IBGE do município."), 
-    produto: Optional[str] = Query(None, description="Filtrar por cultura agrícola (soja, milho, trigo)"),
-    ):
+):
     """Retorna a série histórica de produção por município e/ou produto."""
     return DataService.get_series(municipio_codigo=municipio_codigo, produto=produto)
 

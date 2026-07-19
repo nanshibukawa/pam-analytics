@@ -1,8 +1,10 @@
-from src.utils.logging_config import setup_logging
 from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
-from src.api.services import load_data_to_store, clear_data_store
-from src.api.routers import system, analytics
+
+from src.api.routers import analytics, system
+from src.api.services import clear_data_store, load_data_to_store
+from src.utils.logging_config import setup_logging
 
 logger = setup_logging()
 
@@ -28,4 +30,10 @@ app.include_router(analytics.router)
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("src.api.main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "src.api.main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True,
+        reload_dirs=["src/api", "src/features", "src/models", "src/utils"],
+    )

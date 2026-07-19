@@ -39,6 +39,20 @@ def client(monkeypatch):
         "perda_area_media": [0.01, 0.02, 0.001],
     })
 
+    # Pre-calcula metadados mockados para O(1) /metadata no teste
+    produtos = sorted(df_consolidado["produto"].dropna().unique().tolist())
+    anos = sorted(df_consolidado["ano"].dropna().unique().tolist())
+    df_mun = df_consolidado[["municipio_codigo", "municipio_nome"]].dropna().drop_duplicates().sort_values("municipio_nome")
+    municipios = [
+        {"codigo": int(row["municipio_codigo"]), "nome": row["municipio_nome"]}
+        for _, row in df_mun.iterrows()
+    ]
+    metadata = {
+        "produtos": produtos,
+        "anos": anos,
+        "municipios": municipios
+    }
+
     # Evita que o startup do TestClient tente ler arquivos reais do disco
     monkeypatch.setattr("src.api.main.load_data_to_store", lambda: None)
 
@@ -47,6 +61,9 @@ def client(monkeypatch):
         # Injeta os DataFrames mockados no data_store em memória APÓS o startup_event do TestClient
         monkeypatch.setitem(data_store, "consolidado", df_consolidado)
         monkeypatch.setitem(data_store, "clusters", df_clusters)
+        monkeypatch.setitem(data_store, "metadata", metadata)
+        monkeypatch.setitem(data_store, "valid_produtos", set(produtos))
+        monkeypatch.setitem(data_store, "valid_anos", set(anos))
         yield tc
 
 
@@ -80,8 +97,8 @@ def test_get_series(client):
     assert len(response.json()) == 3
     assert response.json()[0]["produto"] == "soja"
 
-    # Filtro por município
-    response = client.get("/series?municipio_codigo=410020")
+    # Filtro por município (com produto obrigatório)
+    response = client.get("/series?produto=milho&municipio_codigo=410020")
     assert response.status_code == 200
     assert len(response.json()) == 3
     assert response.json()[0]["municipio_nome"] == "Maringa"
@@ -114,11 +131,11 @@ def test_get_clusters(client):
     json_data = response.json()
     
     assert "clusters" in json_data
-    assert "perfis" in json_data
+    assert "profiles" in json_data
     
     assert len(json_data["clusters"]) == 3
-    assert len(json_data["perfis"]) == 3 # 3 clusters distintos (0, 1, 2)
+    assert len(json_data["profiles"]) == 3 # 3 clusters distintos (0, 1, 2)
     
     # O perfil do cluster 0 deve ter a mesma prod_media do único município nele (Londrina = 1000.0)
-    profile_0 = next(p for p in json_data["perfis"] if p["cluster"] == 0)
+    profile_0 = next(p for p in json_data["profiles"] if p["cluster"] == 0)
     assert profile_0["prod_media"] == 1000.0

@@ -80,4 +80,4 @@ class ClustersResponse(BaseModel):
     """Modelo de resposta contendo a lista de municípios rotulados e seus perfis médios."""
 
     clusters: List[ClusterItem] = Field(..., description="Lista de municípios e seus rótulos de cluster")
-    perfis: List[ClusterProfile] = Field(..., description="Resumo médio das features por perfil de cluster")
+    profiles: List[ClusterProfile] = Field(..., description="Resumo médio das features por perfil de cluster")
