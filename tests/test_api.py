@@ -97,11 +97,15 @@ def test_get_series(client):
     assert len(response.json()) == 3
     assert response.json()[0]["produto"] == "soja"
 
-    # Filtro por município (com produto obrigatório)
+    # Filtro por município (com produto)
     response = client.get("/series?produto=milho&municipio_codigo=410020")
     assert response.status_code == 200
     assert len(response.json()) == 3
     assert response.json()[0]["municipio_nome"] == "Maringa"
+
+    # Filtro apenas por município (retrocompatibilidade: produto opcional)
+    response = client.get("/series?municipio_codigo=410020")
+    assert response.status_code == 200
 
 
 def test_get_ranking(client):
@@ -131,11 +135,12 @@ def test_get_clusters(client):
     json_data = response.json()
     
     assert "clusters" in json_data
-    assert "profiles" in json_data
+    assert "perfis" in json_data
+    assert "profiles" not in json_data  # removido para padronização em português
     
     assert len(json_data["clusters"]) == 3
-    assert len(json_data["profiles"]) == 3 # 3 clusters distintos (0, 1, 2)
+    assert len(json_data["perfis"]) == 3 # 3 clusters distintos (0, 1, 2)
     
     # O perfil do cluster 0 deve ter a mesma prod_media do único município nele (Londrina = 1000.0)
-    profile_0 = next(p for p in json_data["profiles"] if p["cluster"] == 0)
+    profile_0 = next(p for p in json_data["perfis"] if p["cluster"] == 0)
     assert profile_0["prod_media"] == 1000.0

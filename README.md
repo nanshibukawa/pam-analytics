@@ -62,6 +62,12 @@ Este comando irá compilar as imagens, sincronizar as dependências e iniciar os
 
 O front-end Streamlit aguarda a API estar completamente iniciada e ativa (status "healthy") antes de se inicializar, graças à política de healthcheck HTTP interna baseada em script Python leve.
 
+### 🔄 Execução Automática do Pipeline (Cold-Start)
+Se o projeto for executado a partir de um diretório limpo (sem a pasta `data/` pré-existente ou com ela vazia), o ecossistema foi programado para se auto-suficiente:
+* Ao iniciar, a API FastAPI detectará a ausência das bases de dados consolidadas e iniciará **automaticamente o pipeline de dados completo** (`src/pipeline_runner.py`).
+* Esse pipeline fará a consulta direta à **API pública do SIDRA/IBGE**, baixando os dados históricos brutos de soja, milho e trigo, efetuará o tratamento/sanitização, executará a engenharia de features analíticas e o treinamento do modelo de clusterização K-Means.
+* O processo é exibido nos logs do container da API. O container do dashboard Streamlit continuará aguardando em modo de espera e só subirá quando todo esse processamento inicial estiver concluído com sucesso.
+
 ---
 
 ## 🧠 Principais Decisões Técnicas e Arquiteturais

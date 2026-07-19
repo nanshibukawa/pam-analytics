@@ -7,7 +7,7 @@ router = APIRouter(tags=["Analytics"])
 
 @router.get("/series", response_model=List[SeriesItem])
 async def get_series(
-    produto: str = Query(..., description="Cultura agrícola (soja, milho, trigo)"),
+    produto: Optional[str] = Query(None, description="Cultura agrícola (soja, milho, trigo)"),
     municipio_codigo: Optional[int] = Query(None, description="Filtrar por código IBGE do município."), 
 ):
     """Retorna a série histórica de produção por município e/ou produto."""

@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Dict, Any, List, Optional
 import pandas as pd
 from fastapi import HTTPException
+from src.pipeline_runner import run_full_pipeline
 
 logger = setup_logging()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -23,11 +24,16 @@ def load_data_to_store():
     """
     logger.info("Iniciando carregamento de dados em memória...")
 
-    if not CONSOLIDADO_PATH.exists():
-        raise FileNotFoundError(f"Arquivo histórico consolidado não encontrado em: {CONSOLIDADO_PATH}")
-
-    if not CLUSTERS_PATH.exists():
-        raise FileNotFoundError(f"Arquivo final de clusters não encontrado em: {CLUSTERS_PATH}")
+    if not CONSOLIDADO_PATH.exists() or not CLUSTERS_PATH.exists():
+        logger.warning("Bases de dados de produção não encontradas localmente. Iniciando execução automática do pipeline ponta a ponta...")
+        
+        try:
+            run_full_pipeline(BASE_DIR)
+        except Exception as e:
+            logger.error(f"Falha na execução automática do pipeline de dados: {e}")
+            raise FileNotFoundError(
+                f"Arquivos de dados necessários ausentes e falha ao gerá-los automaticamente. Erro: {e}"
+            ) from e
 
     logger.info(f"Carregando histórico de: {CONSOLIDADO_PATH}")
     df_consolidado = pd.read_parquet(CONSOLIDADO_PATH)
@@ -234,4 +240,4 @@ class DataService:
         df_profiles = df_filtered.groupby("cluster")[feature_cols].mean().reset_index()
         profiles_list = df_profiles.to_dict(orient="records")
 
-        return {"clusters": clusters_list, "profiles": profiles_list}  
+        return {"clusters": clusters_list, "perfis": profiles_list}  

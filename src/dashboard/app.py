@@ -208,7 +208,7 @@ try:
     df_series_all = pd.DataFrame(load_series_data(produto=produto_selecionado))
     clusters_res = load_clusters_data(produto=produto_selecionado)
     df_clusters = pd.DataFrame(clusters_res.get("clusters", []))
-    df_profiles = pd.DataFrame(clusters_res.get("profiles", []))
+    df_profiles = pd.DataFrame(clusters_res.get("perfis", []))
 except Exception as e:
     st.error(f"⚠️ Erro ao carregar dados da API para '{produto_selecionado}': {e}")
     st.info("Por favor, certifique-se de que a API backend está ativa e tente recarregar a página.")
