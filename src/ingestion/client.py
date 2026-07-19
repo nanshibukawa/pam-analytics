@@ -1,8 +1,9 @@
 import requests
-from src.utils.logging_config import setup_logging
-from src.ingestion.sidra_mapping import BASE_URL_API_SIDRA
-from urllib3.util import Retry
 from requests.adapters import HTTPAdapter
+from urllib3.util import Retry
+
+from src.ingestion.sidra_mapping import BASE_URL_API_SIDRA
+from src.utils.logging_config import setup_logging
 
 logger = setup_logging()
 
@@ -47,10 +48,10 @@ class SidraClient:
             response.raise_for_status()
             return response.json()
 
-        except requests.exceptions.Timeout:
+        except requests.exceptions.Timeout as e:
             logger.error(f"Timeout na requisição GET para {url}")
-            raise Exception(f"Timeout na requisição GET para {url}")
+            raise Exception(f"Timeout na requisição GET para {url}") from e
 
         except requests.exceptions.RequestException as e:
             logger.error(f"Erro HTTP ao fazer GET para {url}: {e}")
-            raise Exception(f"Erro HTTP ao fazer GET para {url}: {e}")
+            raise Exception(f"Erro HTTP ao fazer GET para {url}: {e}") from e

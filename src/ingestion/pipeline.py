@@ -2,18 +2,20 @@
 
 import json
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
-from src.utils.logging_config import setup_logging
+
 from src.ingestion.client import SidraClient
 from src.ingestion.sidra_mapping import (
-    SidraCrops,
-    SidraTable,
-    SidraPeriod,
-    SidraLocality,
-    SidraVariables,
     SIDRA_RENAME_MAP,
+    SidraCrops,
+    SidraLocality,
+    SidraPeriod,
+    SidraTable,
+    SidraVariables,
 )
+from src.utils.logging_config import setup_logging
 
 logger = setup_logging()
 
@@ -81,7 +83,6 @@ class IngestionPipeline:
                     continue
 
                 df = df.iloc[1:]
-
 
                 df_2 = df[list(SIDRA_RENAME_MAP.keys())].rename(columns=SIDRA_RENAME_MAP)
 
