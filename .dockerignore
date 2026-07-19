@@ -1,0 +1,23 @@
+# Ignore Git repository metadata
+.git
+.gitignore
+
+# Ignore Python virtual environments and caches
+.venv
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.ruff_cache/
+
+# Ignore local datasets (mounted dynamically via volumes)
+data/
+
+# Ignore documentation, notebook scratchpads, and logs
+docs/
+notebooks/
+scratch/
+logs/
+README.md
+*.ipynb

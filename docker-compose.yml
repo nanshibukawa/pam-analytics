@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    container_name: pam_analytics_api
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mapeamento do diretório de dados para permitir persistência e atualizações do host
+      - ./data:/app/data
+      # Montagem do código fonte local para permitir hot-reload
+      - ./src:/app/src
+    command: ["/app/.venv/bin/python", "src/api/main.py"]
+    healthcheck:
+      # Utiliza python nativo no container slim para fazer a verificação HTTP sem necessitar de curl ou wget
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=5)"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 300s
+    restart: always
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: docker/dashboard.Dockerfile
+    container_name: pam_analytics_dashboard
+    ports:
+      - "8501:8501"
+    environment:
+      # URL interna da API na rede Docker privada usando o nome do serviço
+      - API_BASE_URL=http://api:8000
+    volumes:
+      # Montagem do código fonte local para hot-reload instantâneo no Streamlit
+      - ./src:/app/src
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: always
