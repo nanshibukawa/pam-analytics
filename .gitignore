@@ -20,7 +20,7 @@ data/
 # docs/fase*.md
 
 # Temporarily ignore future phases until we work on them
-docs/fase4_modelagem.md
+
 docs/fase5_api.md
 docs/fase6_dashboard.md
 docs/fase7_docker.md

@@ -120,7 +120,7 @@ class FeatureBuilder:
             # Média das variáveis físicas/financeiras (Escala)
             mean_prod = group["quantidade_produzida"].mean()
             mean_area = group["area_plantada"].mean()
-            mean_yield = group["rendimento_medio"].mean()
+            median_yield = group["rendimento_medio"].median()
             mean_value = group["valor_producao"].mean()
 
             # Prepara séries com o ano como índice para os cálculos temporais de forma eficiente
@@ -146,7 +146,7 @@ class FeatureBuilder:
                     "produto": prod,
                     "prod_media": mean_prod,
                     "area_media": mean_area,
-                    "rendimento_medio_med": mean_yield,
+                    "rendimento_medio_med": median_yield,
                     "valor_producao_medio": mean_value,
                     "volatilidade_prod": cv_prod,
                     "cagr_producao": cagr_prod,
