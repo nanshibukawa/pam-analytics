@@ -19,7 +19,7 @@ Para atender rigorosamente aos requisitos do PDF oficial do desafio (escala, pro
 | Dimensão Oficial do PDF | Feature do Projeto | Descrição | Regra de Negócio / Comportamento Ideal |
 | :--- | :--- | :--- | :--- |
 | **Escala** | `prod_media`<br>`area_media`<br>`valor_producao_medio` | Média histórica da produção (t), área plantada (ha) e valor da produção (R$ 1.000). | Define o tamanho absoluto e relevância econômica do município. Tratada com `RobustScaler` para evitar que mega-produtores distorçam o modelo. |
-| **Produtividade** | `rendimento_medio_med` | Média histórica do rendimento médio (kg/ha). | Mede a eficiência técnica da lavoura (o quão produtivo é o solo/manejo), independente do tamanho do município. |
+| **Produtividade** | `rendimento_medio_med` | Mediana histórica do rendimento médio (kg/ha). | Mede a eficiência técnica da lavoura (o quão produtivo é o solo/manejo), independente do tamanho do município. |
 | **Crescimento** | `cagr_producao`<br>`cagr_rendimento`<br>`trend_slope_producao` | CAGR da produção e rendimento (crescimento geométrico) e inclinação linear (Slope) da produção. | **Quanto maior, melhor**. O CAGR resume o crescimento composto de longo prazo, enquanto o Slope avalia a tendência de todos os anos intermediários para blindar o modelo contra anos de seca extrema nas pontas. |
 | **Estabilidade** | `volatilidade_prod`<br>`perda_area_media` | Coeficiente de Variação (CV) da produção e taxa média de área plantada perdida (risco climático/operacional). | **Quanto menor, melhor**. O CV avalia o risco/estabilidade geral, e a perda de área mede a vulnerabilidade climática estrutural do município (área plantada vs. colhida). |
 | **Participação Relativa** | `market_share_medio` | Média anual de participação do município na produção total do estado do Paraná. | **Quanto maior, melhor**. Mede a dominância regional do município no estado do Paraná, isolando oscilações macroclimáticas gerais. |
@@ -31,10 +31,10 @@ Para atender rigorosamente aos requisitos do PDF oficial do desafio (escala, pro
 ### 1. O Fluxo Correto: Como as features são geradas
 Para cada combinação de **Município + Produto** (ex: Londrina + Soja), o dataset original possui 15 linhas (uma para cada ano de 2010 a 2024). O objetivo da engenharia de features é consolidar essas 15 linhas temporais em uma única linha estática contendo as métricas de interesse para a clusterização:
 
-* **A. Indicadores de "Escala" e "Produtividade":** Média simples de todo o período histórico de 15 anos.
+* **A. Indicadores de "Escala" e "Produtividade":** 
   * `prod_media` = Média aritmética da quantidade produzida (t).
   * `area_media` = Média aritmética da área plantada (ha).
-  * `rendimento_medio_med` = Média aritmética do rendimento médio (kg/ha).
+  * `rendimento_medio_med` = Mediana histórica do rendimento médio (kg/ha).
 * **B. Indicador de "Market Share" (Participação Relativa):**
   1. Primeiro, calcula-se o Market Share de cada município em cada ano individualmente (ex: $\text{Produção}_{\text{Londrina}, 2010} / \text{Produção}_{\text{PR}, 2010}$).
   2. Com a série temporal de 15 taxas anuais gerada, calcula-se a média aritmética simples dessas participações para obter o `market_share_medio`.
