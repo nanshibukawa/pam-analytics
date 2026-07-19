@@ -15,11 +15,14 @@ data/
 # Jupyter Notebook checkpoints
 .ipynb_checkpoints/
 
-# Documentation and planning (Technical Challenge - Local only)
+# Documentation and planning
 project_roadmap.md
-review_guia_sobrevivencia.md
 scope_analysis_and_boilerplate.md
+# Temporarily ignore future phases until we work on them
 
+docs/fase5_api.md
+docs/fase6_dashboard.md
+docs/fase7_docker.md
 # Scratch and private files
 scratch/
 logs/
