@@ -72,7 +72,7 @@ class AgriculturalClusterer:
     def _train_crop_model(self, df_crop: pd.DataFrame, crop_name: str) -> pd.DataFrame:
         """Aplica normalização, treina o KMeans e reordena os labels de forma crescente."""
         df = df_crop.copy()
-        X = df[self.feature_cols].values
+        X = df[self.feature_cols].values  # noqa: N806
 
         # RobustScaler: protege o KMeans de distorções causadas por mega-produtores (outliers)
         scaler = RobustScaler()

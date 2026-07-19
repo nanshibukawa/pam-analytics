@@ -145,31 +145,39 @@ import pandas as pd
 from pathlib import Path
 
 class AgriculturalClusterer:
-    def __init__(self, features_path: Path):
+    def __init__(
+        self,
+        features_path: str | Path,
+        output_path: str | Path,
+        n_clusters: int = 4,
+        random_state: int = 42,
+    ):
         """
-        Inicializa o clusterizador com o caminho do arquivo de features gerado na Fase 3.
+        Inicializa o orquestrador do pipeline de modelagem e clusterização.
         """
-        self.features_path = features_path
+        self.features_path = Path(features_path)
+        self.output_path = Path(output_path)
+        self.n_clusters = n_clusters
+        self.random_state = random_state
         
-    def load_features(self) -> pd.DataFrame:
+    def _load_features(self) -> pd.DataFrame:
         """
         Carrega a base de features consolidada do Parquet.
         """
         pass
 
-    def train_crop_model(self, df_crop: pd.DataFrame, n_clusters: int) -> pd.DataFrame:
+    def _train_crop_model(self, df_crop: pd.DataFrame, crop_name: str) -> pd.DataFrame:
         """
         Aplica o RobustScaler sobre as features selecionadas e executa a clusterização
         (K-Means/K-Medoids) de forma isolada para os dados de uma cultura específica.
         Retorna o DataFrame original com a coluna 'cluster' rotulada e ordenada pela produção média.
-        (A lógica detalhada de treinamento encontra-se implementada em src/models/clusterer.py)
         """
         pass
 
-    def evaluate_k(self, df_crop: pd.DataFrame, max_k: int = 8) -> dict:
+    def run_pipeline(self) -> pd.DataFrame:
         """
-        Calcula e avalia as métricas de Inércia e Silhouette Score para diferentes
-        valores de K para auxiliar na escolha da quantidade ótima de clusters.
+        Executa a clusterização de todas as culturas e consolida os resultados,
+        salvando a base final de clusters em disco.
         """
         pass
 ```
