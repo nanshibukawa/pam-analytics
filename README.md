@@ -119,12 +119,6 @@ Para resolver a variabilidade aleatória da inicialização do K-Means, implemen
 *   **Cluster 2:** Eficientes / Alta Produtividade em Média Escala.
 *   **Cluster 3:** Gigantes Agrícolas / Polos de Altíssima Produção e Estabilidade.
 
-### 6. Design de Visualização Científico (Zero Pizza/Rosquinha)
-Respeitando as melhores práticas de visualização de dados científicos e inteligência de negócios, **o painel não contém gráficos de pizza ou de rosquinha**. Em vez disso, focamos em visualizações de alta capacidade analítica:
-*   **Bar charts horizontais ordenados** para rankings.
-*   **Linhas temporais com duplo eixo Y** para cruzar volume com eficiência.
-*   **Scatter plots bidimensionais** com retas de corte para matrizes de risco (Volatilidade vs. Perda de Área) e separação de clusters (Produção vs. Rendimento).
-
 ---
 
 ## 🔍 Limitações da Solução
