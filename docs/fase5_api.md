@@ -17,19 +17,19 @@ Este documento descreve as especificações técnicas, padrões de rotas (REST) 
 
 ### 1. `GET /health`
 * **Descrição:** Healthcheck simples para monitorar se a API está no ar (essencial para monitoramento e orquestração do Docker).
-* **Retorno:** JSON simples (ex: `{"status": "healthy"}`).
+* **Retorno:** JSON simples (ex: `{"status": "ok"}`).
 
 ### 2. `GET /metadata`
 * **Descrição:** Retorna as listas de valores únicos presentes na base para que o Dashboard Streamlit possa desenhar seus filtros dinamicamente.
 * **Retorno:** Produtos disponíveis, anos disponíveis, e municípios disponíveis (nome e código).
 
 ### 3. `GET /series`
-* **Parâmetros:** `produto: str` (obrigatório), `municipio_codigo: int` (opcional).
+* **Parâmetros:** `produto: str` (opcional), `municipio_codigo: int` (opcional).
 * **Descrição:** Retorna a série histórica de produção anual (2010 a 2024) para a combinação selecionada.
 * **Retorno:** Lista de dicionários com ano, variáveis físicas e financeiras da lavoura.
 
 ### 4. `GET /ranking`
-* **Parâmetros:** `produto: str` (obrigatório), `ano: int` (obrigatório), `metric: str` (obrigatório - ex: 'quantidade_produzida', 'area_plantada', etc.).
+* **Parâmetros:** `produto: str` (obrigatório), `ano: int` (obrigatório), `metric: str` (opcional - padrão: 'quantidade_produzida', opções: 'quantidade_produzida', 'area_plantada', 'area_colhida', 'rendimento_medio', 'valor_producao').
 * **Descrição:** Retorna a lista dos maiores municípios produtores com base na métrica especificada.
 * **Retorno:** Lista ordenada contendo nome do município, código e o valor correspondente.
 
@@ -56,13 +56,13 @@ src/api/
     └── analytics.py    # Endpoints de negócio (/series, /ranking, /clusters)
 ```
 
-### 1. Camada de Serviço (`src/api/services.py`)
-Responsável por encapsular a manipulação de dados (Pandas) e o cache global em memória (`data_store`). Os endpoints não realizam operações direta de dados, apenas invocam os métodos estáticos da classe `DataService`. Implementa validações robustas e o padrão Fail-Fast (lançando exceções no startup se os dados cruciais estiverem ausentes).
+### 1. Camada de Serviço ([services.py](../src/api/services.py))
+Responsável por encapsular a manipulação de dados (Pandas) e o cache global em memória (`data_store`). Os endpoints não realizam operações diretas de dados, apenas invocam os métodos estáticos da classe `DataService`. Implementa validações robustas e o padrão Fail-Fast (lançando exceções no startup se os dados cruciais estiverem ausentes). Os contratos de entrada e saída são definidos em [schemas.py](../src/api/schemas.py).
 
 ### 2. Camada de Rotas (Routers)
 Desacopla as URLs e as regras de controle do FastAPI:
-* **`routers/system.py`**: Gerencia endpoints utilitários.
-* **`routers/analytics.py`**: Gerencia consultas de séries temporais, ordenação de rankings e dados de clusters.
+* **[system.py](../src/api/routers/system.py)**: Gerencia endpoints utilitários como `/health` e `/metadata`.
+* **[analytics.py](../src/api/routers/analytics.py)**: Gerencia consultas de séries temporais, ordenação de rankings e dados de clusters.
 
-### 3. Arquivo Principal (`src/api/main.py`)
-Fica responsável estritamente por instanciar o `FastAPI`, gerenciar o ciclo de vida (`lifespan`) para carga e limpeza de cache, e plugar os routers modulares por meio do método `app.include_router()`.
+### 3. Arquivo Principal ([main.py](../src/api/main.py))
+Fica responsável estritamente por instanciar o `FastAPI`, gerenciar o ciclo de vida (`lifespan`) para carga e limpeza de cache, e acoplar os routers modulares por meio do método `app.include_router()`.

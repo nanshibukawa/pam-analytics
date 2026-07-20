@@ -90,7 +90,7 @@ As variáveis físicas da dimensão de Escala (`prod_media`, `area_media` e `val
   * **No Projeto Agrícola:** Dropar `area_media` e `valor_producao_medio` no treinamento equivale a remover a redundância física/financeira. Mantemos apenas **`prod_media`** (como representante da Escala) e **`rendimento_medio_med`** (equivalente ao valor do $m^2$, representando a Eficiência Agrícola).
 
   * **Justificativa de Escolha da Âncora de Escala (`prod_media`):**
-    A escolha de manter a produção física (`prod_media`) em detrimento da área (`area_media`) ou do valor financeiro (`valor_producao_medio`) foi pautada por critérios técnicos e de negócios da Coamo:
+    A escolha de manter a produção física (`prod_media`) em detrimento da área (`area_media`) ou do valor financeiro (`valor_producao_medio`) foi pautada por critérios técnicos e de negócios:
     1. **Relevância Logística:** A infraestrutura de cooperativas agrícolas (silos, capacidade de recepção e escoamento) é dimensionada diretamente pela quantidade física de grãos em toneladas, tornando a produção a variável de maior impacto operacional.
     2. **Estabilidade contra Oscilações de Mercado:** O valor de produção ($R\$$) é fortemente influenciado por inflação, flutuação cambial (dólar) e volatilidade do valor das commodities. A produção em toneladas nos dá uma métrica física e estável ao longo dos 14 anos analisados.
     3. **Foco na Produção Efetiva:** A área plantada reflete o potencial de terra, mas não a eficiência de colheita. Municípios com grandes áreas e técnicas rudimentares teriam peso inflado. A produção física capta o resultado final consolidado.
@@ -125,24 +125,25 @@ Para a clusterização, as dimensões oficiais do desafio foram traduzidas em fe
 | :--- | :--- | :--- | :--- |
 | **Escala** | `prod_media`<br>`area_media`<br>`valor_producao_medio` | Média histórica da produção (t), área plantada (ha) e valor da produção (R$ 1.000). | Define o tamanho absoluto e relevância econômica do município. Tratada com `RobustScaler` para evitar que mega-produtores distorçam o modelo. |
 | **Produtividade** | `rendimento_medio_med` | Mediana histórica do rendimento médio (kg/ha). | Mede a eficiência técnica da lavoura (o quão produtivo é o solo/manejo), independente do tamanho do município. |
-| **Crescimento** | `cagr_producao`<br>`cagr_rendimento`<br>`trend_slope_producao` | CAGR da produção e rendimento (crescimento geométrico) e inclinação linear (Slope) da produção. | **Quanto maior, melhor**. O CAGR resume o crescimento composto de longo prazo, enquanto o Slope avalia a tendência de todos os anos intermediários para blindar o modelo contra anos de seca extrema nas pontas. |
+| **Crescimento** | `cagr_producao`<br>`cagr_rendimento`<br>`trend_slope_producao_norm` | CAGR da produção e rendimento (crescimento geométrico) e inclinação linear normalizada (Slope relativo) da produção. | **Quanto maior, melhor**. O CAGR resume o crescimento composto de longo prazo, enquanto o Slope relativo avalia a tendência e velocidade de crescimento dos anos intermediários, isolando o tamanho absoluto do produtor. |
 | **Estabilidade** | `volatilidade_prod`<br>`perda_area_media` | Coeficiente de Variação (CV) da produção e taxa média de área plantada perdida (risco climático/operacional). | **Quanto menor, melhor**. O CV avalia o risco/estabilidade geral, e a perda de área mede a vulnerabilidade climática estrutural do município (área plantada vs. colhida). |
 | **Participação Relativa** | `market_share_medio` | Média anual de participação do município na produção total do estado do Paraná. | **Quanto maior, melhor**. Mede a dominância regional do município no estado do Paraná, isolando oscilações macroclimáticas gerais. |
 
 > [!NOTE]
-> **Média vs. Mediana (Resumo de Design Estatístico):**
+> **Média vs. Mediana e Normalização do Slope (Resumo de Design Estatístico):**
 > * **Mediana para Produtividade (`rendimento_medio_med`):** Filtra anos de catástrofes climáticas atípicas (outliers negativos) e revela o real patamar tecnológico do produtor.
 > * **Média para Perdas (`perda_area_media`):** Mantida para perdas pois precisamos medir o risco acumulado. Se usássemos a mediana, as secas históricas pontuais seriam zeradas da estatística, mascarando o risco do município.
+> * **Slope Normalizado (`trend_slope_producao_norm`):** Usamos o Slope dividido pela produção média para fins de treinamento do K-Means. Isso evita que grandes municípios dominem a variável de crescimento do modelo com slopes absolutos gigantescos, capturando o dinamismo de crescimento relativo (decimal). O Slope absoluto (`trend_slope_producao`) em toneladas é mantido na base apenas para apresentação de dados de negócios no Dashboard.
 
 ---
 
-## 📝 Blueprint do Código (Estrutura Recomendada para `src/models/clusterer.py`)
+## 📝 Blueprint do Código (Estrutura Recomendada para [clusterer.py](../src/models/clusterer.py))
 
-Abaixo está o fluxo recomendado para construir a classe `AgriculturalClusterer`:
+Abaixo está a interface do modelador implementada na classe `AgriculturalClusterer` (a implementação completa encontra-se no arquivo físico [clusterer.py](../src/models/clusterer.py)):
 
 ```python
-import pandas as pd
 from pathlib import Path
+import pandas as pd
 
 class AgriculturalClusterer:
     def __init__(
@@ -159,6 +160,13 @@ class AgriculturalClusterer:
         self.output_path = Path(output_path)
         self.n_clusters = n_clusters
         self.random_state = random_state
+
+    def run_pipeline(self) -> pd.DataFrame:
+        """
+        Executa a clusterização de todas as culturas e consolida os resultados,
+        salvando a base final de clusters em disco.
+        """
+        pass    
         
     def _load_features(self) -> pd.DataFrame:
         """
@@ -169,15 +177,9 @@ class AgriculturalClusterer:
     def _train_crop_model(self, df_crop: pd.DataFrame, crop_name: str) -> pd.DataFrame:
         """
         Aplica o RobustScaler sobre as features selecionadas e executa a clusterização
-        (K-Means/K-Medoids) de forma isolada para os dados de uma cultura específica.
+        (K-Means) de forma isolada para os dados de uma cultura específica.
         Retorna o DataFrame original com a coluna 'cluster' rotulada e ordenada pela produção média.
         """
         pass
 
-    def run_pipeline(self) -> pd.DataFrame:
-        """
-        Executa a clusterização de todas as culturas e consolida os resultados,
-        salvando a base final de clusters em disco.
-        """
-        pass
 ```

@@ -68,6 +68,33 @@ Se o projeto for executado a partir de um diretório limpo (sem a pasta `data/` 
 * Esse pipeline fará a consulta direta à **API pública do SIDRA/IBGE**, baixando os dados históricos brutos de soja, milho e trigo, efetuará o tratamento/sanitização, executará a engenharia de features analíticas e o treinamento do modelo de clusterização K-Means.
 * O processo é exibido nos logs do container da API. O container do dashboard Streamlit continuará aguardando em modo de espera e só subirá quando todo esse processamento inicial estiver concluído com sucesso.
 
+### 💻 Executando Localmente (Sem Docker)
+
+Se preferir rodar os serviços diretamente na sua máquina host para desenvolvimento ativo, siga os passos abaixo utilizando o gerenciador de pacotes `uv`:
+
+1. **Instalar Dependências e Criar Ambiente Virtual:**
+   ```bash
+   uv sync
+   ```
+
+2. **Executar o Pipeline de Dados (Opcional - caso precise regerar as bases manualmente):**
+   ```bash
+   uv run python src/pipeline_runner.py
+   ```
+
+3. **Iniciar a API Backend (FastAPI):**
+   ```bash
+   uv run python src/api/main.py
+   ```
+   * *A API estará acessível em: http://localhost:8000*
+   * *Documentação interativa Swagger: http://localhost:8000/docs*
+
+4. **Iniciar o Dashboard Frontend (Streamlit) em outro terminal:**
+   ```bash
+   uv run streamlit run src/dashboard/app.py
+   ```
+   * *O dashboard estará acessível em: http://localhost:8501*
+
 ---
 
 ## 🧠 Principais Decisões Técnicas e Arquiteturais

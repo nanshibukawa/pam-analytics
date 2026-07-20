@@ -25,31 +25,28 @@ flowchart LR
 
 ---
 
-## 📝 Blueprint do Código (Estrutura Recomendada para `src/dashboard/app.py`)
+## 📝 Blueprint do Código (Estrutura Recomendada para [app.py](../src/dashboard/app.py))
 
-Abaixo está o fluxo lógico estruturado para criar o seu aplicativo Streamlit:
+Abaixo está o fluxo lógico estruturado do painel Streamlit (a implementação completa encontra-se em [app.py](../src/dashboard/app.py) e a camada de consumo HTTP está isolada em [api_client.py](../src/dashboard/api_client.py)):
 
 ```python
 import streamlit as st
-import requests
 import pandas as pd
-
-# URL base da API FastAPI
-API_URL = "http://localhost:8000"
+from src.dashboard.api_client import APIClient
 
 st.set_page_config(
-    page_title="PAM Analytics Dashboard",
+    page_title="PAM Paraná Analytics",
+    page_icon="🚜",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-st.title("🌾 PAM Analytics - Painel de Clusterização Agrícola do Paraná")
-
-# 1. Carregar Metadata da API FastAPI para popular os filtros dinâmicos (GET /metadata)
-# 2. Desenhar a barra lateral de filtros (Cultura, Ano, Município para Série Histórica)
-# 3. Desenhar o painel principal estruturado em abas com st.tabs:
-#    - Aba 1: Gráfico temporal de evolução física/financeira (GET /series)
-#    - Aba 2: Gráfico de barras com o ranking dos produtores (GET /ranking)
-#    - Aba 3: Tabelas de perfis descritivos dos clusters e listagem de municípios (GET /clusters)
-# (A implementação completa do frontend em Streamlit encontra-se no arquivo src/dashboard/app.py)
+# 1. Verificação de Saúde da API através do cliente HTTP (APIClient.check_health())
+# 2. Carregar Metadados da API FastAPI para popular os filtros (APIClient.get_metadata())
+# 3. Desenhar a barra lateral de filtros (Cultura e Ano Base)
+# 4. Carregar os dados específicos da Cultura selecionada (APIClient.get_series(), APIClient.get_clusters())
+# 5. Desenhar o painel principal estruturado em abas com st.tabs:
+#    - Aba 1: Gráfico de evolução temporal e detalhamento do município
+#    - Aba 2: Gráficos de dispersão e tabela de scores de Risco Agrícola
+#    - Aba 3: Perfis descritivos dos clusters gerados e agrupamentos multidimensionais
 ```
