@@ -47,8 +47,6 @@ class FeatureBuilder:
             return 0.0
 
         slope, _ = np.polyfit(x[mask], y[mask], 1)
-        # TODO: Avaliar normalização do Slope pela média (Slope / mean_val) para obter a taxa de
-        # crescimento linear relativo (decimal) e evitar distorções de megaprodutores no KMeans.
         return float(slope)
 
     def calculate_cagr(self, series: pd.Series) -> float:
@@ -134,6 +132,7 @@ class FeatureBuilder:
             cagr_prod = self.calculate_cagr(prod_series)
             cagr_yield = self.calculate_cagr(yield_series)
             slope_prod = self.calculate_slope(prod_series)
+            slope_prod_norm = slope_prod / mean_prod if mean_prod > 0 else 0.0
 
             # Médias de market share e perda de área
             mean_market_share = group["market_share"].mean()
@@ -152,6 +151,7 @@ class FeatureBuilder:
                     "cagr_producao": cagr_prod,
                     "cagr_rendimento": cagr_yield,
                     "trend_slope_producao": slope_prod,
+                    "trend_slope_producao_norm": slope_prod_norm,
                     "market_share_medio": mean_market_share,
                     "perda_area_media": mean_area_loss,
                 }

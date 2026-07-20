@@ -31,7 +31,7 @@ class AgriculturalClusterer:
             "rendimento_medio_med",
             "cagr_producao",
             "cagr_rendimento",
-            "trend_slope_producao",
+            "trend_slope_producao_norm",
             "volatilidade_prod",
             "perda_area_media",
         ]
