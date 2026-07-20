@@ -222,8 +222,4 @@ class FeatureBuilder:
         Calcula o Coeficiente de Variação (CV) da série histórica.
         """
         pass
-        """
-        Executa a geração completa de features e salva a base final no formato Parquet.
-        """
-        pass
 ```
