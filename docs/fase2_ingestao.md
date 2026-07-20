@@ -172,36 +172,43 @@ Após rodar o pivot e aplicar a renomeação das variáveis, os dados são conso
 
 ---
 
-## 📝 Blueprint do Código (Estrutura Recomendada para `src/ingestion/pipeline.py`)
+## 📝 Blueprint do Código (Estrutura Recomendada para [pipeline.py](../src/ingestion/pipeline.py))
 
-Abaixo está o fluxo lógico recomendado para implementar dentro da classe `IngestionPipeline`:
+Abaixo está a interface do orquestrador implementada na classe `IngestionPipeline` (para detalhes da lógica completa, acesse o arquivo físico [pipeline.py](../src/ingestion/pipeline.py)):
 
 ```python
-import pandas as pd
 from pathlib import Path
+import pandas as pd
+from src.ingestion.client import SidraClient
 
 class IngestionPipeline:
-    def __init__(self, client, base_dir: Path):
+    def __init__(self, client: SidraClient, base_dir: Path):
         """
-        Inicializa o pipeline de ingestão com o cliente de API e diretórios do projeto.
+        Inicializa o pipeline de ingestão, definindo os diretórios locais
+        e garantindo a criação física das pastas de destino no disco.
         """
         self.client = client
         self.base_dir = base_dir
         self.raw_dir = base_dir / "data" / "raw"
         self.processed_dir = base_dir / "data" / "processed"
 
-    def process_raw_data(self) -> pd.DataFrame:
+    def run(self):
         """
-        Lê os arquivos JSON brutos de data/raw, aplica o tratamento dos símbolos especiais
-        do IBGE, pivota as colunas de formato longo para largo e unifica as três culturas.
-        (A lógica detalhada de processamento encontra-se em src/ingestion/pipeline.py)
+        Orquestra a pipeline executando o download de todas as culturas e o processamento,
+        salvando a base consolidada final no formato Parquet em data/processed.
         """
         pass
 
-    def run(self):
+    def _download_all_raw_data(self):
         """
-        Orquestra a pipeline executando o download (se necessário) e o processamento,
-        salvando a base consolidada final no formato Parquet em data/processed.
+        Baixa os dados brutos de cada cultura agrícola da API do SIDRA e salva em JSON.
+        """
+        pass
+
+    def _process_raw_data(self) -> pd.DataFrame:
+        """
+        Lê os arquivos JSON brutos de data/raw, aplica o tratamento dos símbolos especiais
+        do IBGE, pivota as colunas de formato longo para largo e unifica as três culturas.
         """
         pass
 ```

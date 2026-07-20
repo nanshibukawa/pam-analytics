@@ -14,7 +14,7 @@ Este documento detalha o pipeline de engenharia de features para converter a sé
 
 ## 📊 Mapeamento e Definição das Features para a Clusterização
 
-Para atender rigorosamente aos requisitos do PDF oficial do desafio (escala, produtividade, crescimento, estabilidade e participação relativa) no contexto do modelo de clusterização, as features foram mapeadas da seguinte forma:
+As features foram mapeadas da seguinte forma (escala, produtividade, crescimento, estabilidade e participação relativa):
 
 | Dimensão Oficial do PDF | Feature do Projeto | Descrição | Regra de Negócio / Comportamento Ideal |
 | :--- | :--- | :--- | :--- |
@@ -104,7 +104,7 @@ graph TD
         C -->|Diferença Média / Plantada| J["perda_area_media (Risco Climático)"]
         C -->|Média Aritmética| K["area_media (Escala Física)"]
         
-        D -->|Média Aritmética| L["rendimento_medio_med (Produtividade)"]
+        D -->|Mediana Histórica| L["rendimento_medio_med (Produtividade)"]
         
         E -->|Média Aritmética| M["valor_producao_medio (Escala Econômica)"]
     end
@@ -154,6 +154,12 @@ Inclinação da reta de regressão linear para diferenciar municípios em expans
 $$\text{Slope} = \frac{\sum (x - \bar{x})(y - \bar{y})}{\sum (x - \bar{x})^2}$$
 *Onde:* $x$ é o Ano (2010-2024) e $y$ é a Quantidade Produzida. Calculado de forma simples em Python usando a função `numpy.polyfit(anos, producao, 1)[0]`.
 
+> [!IMPORTANT]
+> **Normalização do Slope para Treinamento (K-Means):**
+> O Slope absoluto é fortemente influenciado pela escala do município (um megaprodutor que cresce 5% ao ano tem um slope de milhares de toneladas, enquanto um pequeno produtor tem um slope pequeno, mesmo com a mesma taxa de crescimento). Para o treinamento do K-Means, criamos a feature **`trend_slope_producao_norm`** dividindo o Slope pela produção média histórica do município:
+> $$\text{Slope Normalizado} = \frac{\text{Slope Absoluto}}{\text{Produção Média}}$$
+> Isso isola o viés da escala física absoluta e representa a taxa de crescimento linear relativo. A feature absoluta original (`trend_slope_producao`) é preservada na base para fins de renderização nos gráficos e tabelas do Dashboard.
+
 ### 4. Perda Média de Área (Risco Climático/Operacional)
 Mede o percentual médio de área plantada que não chegou a ser colhida (por conta de secas, geadas, pragas, etc.).
 $$\text{Perda de Área} = \text{Média} \left( \frac{\text{Área Plantada} - \text{Área Colhida}}{\text{Área Plantada}} \right)$$
@@ -164,13 +170,13 @@ $$\text{Market Share}_{m, t} = \frac{\text{Produção}_{m, t}}{\sum_{i} \text{Pr
 
 ---
 
-## 📝 Blueprint do Código (Estrutura Recomendada para `src/features/builder.py`)
+## 📝 Blueprint do Código (Estrutura Recomendada para [builder.py](../src/features/builder.py))
 
-Abaixo está o fluxo recomendado para construir a classe `FeatureBuilder`:
+Abaixo está a interface implementada na classe `FeatureBuilder` (a lógica interna encontra-se implementada no arquivo [builder.py](../src/features/builder.py)):
 
 ```python
-import pandas as pd
 from pathlib import Path
+import pandas as pd
 
 class FeatureBuilder:
     def __init__(self, processed_data_path: Path):
@@ -178,35 +184,14 @@ class FeatureBuilder:
         Inicializa o construtor de features com o caminho do arquivo processado.
         """
         self.data_path = processed_data_path
-        
-    def load_data(self) -> pd.DataFrame:
+
+    def run(self) -> Path:
         """
-        Carrega a base consolidada Parquet gerada na Fase 2.
+        Executa a geração completa de features e salva a base final no formato Parquet.
         """
         pass
 
-    def calculate_slope(self, series: pd.Series) -> float:
-        """
-        Calcula a inclinação linear (Slope) da série histórica do município/cultura.
-        (A lógica detalhada do polyfit encontra-se implementada em src/features/builder.py)
-        """
-        pass
-
-    def calculate_cagr(self, series: pd.Series) -> float:
-        """
-        Calcula a Taxa de Crescimento Anual Composta (CAGR) da produção ou rendimento.
-        (A lógica detalhada de limites e anos válidos encontra-se em src/features/builder.py)
-        """
-        pass
-
-    def calculate_volatility(self, series: pd.Series) -> float:
-        """
-        Calcula o Coeficiente de Variação (CV) da série histórica.
-        (A lógica detalhada do cálculo encontra-se em src/features/builder.py)
-        """
-        pass
-
-    def build_features(self) -> pd.DataFrame:
+    def _build_features(self) -> pd.DataFrame:
         """
         Orquestra as agregações e cálculos temporais (CV, CAGR, Slope, Perda de Área,
         e Market Share) agrupados por municipio_codigo e produto.
@@ -214,9 +199,27 @@ class FeatureBuilder:
         """
         pass
 
-    def run(self) -> Path:
+    def _load_data(self) -> pd.DataFrame:
         """
-        Executa a geração completa de features e salva a base final no formato Parquet.
+        Carrega a base consolidada Parquet gerada na Fase 2.
+        """
+        pass
+
+    def _calculate_slope(self, series: pd.Series) -> float:
+        """
+        Calcula a inclinação linear (Slope) da série histórica do município/cultura.
+        """
+        pass
+
+    def _calculate_cagr(self, series: pd.Series) -> float:
+        """
+        Calcula a Taxa de Crescimento Anual Composta (CAGR) da produção ou rendimento.
+        """
+        pass
+
+    def _calculate_volatility(self, series: pd.Series) -> float:
+        """
+        Calcula o Coeficiente de Variação (CV) da série histórica.
         """
         pass
 ```
