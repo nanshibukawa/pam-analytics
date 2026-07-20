@@ -31,6 +31,7 @@ def synthetic_features_df():
         "cagr_producao": np.random.uniform(-0.1, 0.3, size=n_rows),
         "cagr_rendimento": np.random.uniform(-0.05, 0.1, size=n_rows),
         "trend_slope_producao": np.random.uniform(-100, 4000, size=n_rows),
+        "trend_slope_producao_norm": np.random.uniform(-0.1, 0.3, size=n_rows),
         "volatilidade_prod": np.random.uniform(0.1, 3.0, size=n_rows),
         "perda_area_media": np.random.uniform(0.0, 0.05, size=n_rows),
     }
