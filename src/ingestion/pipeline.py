@@ -36,7 +36,31 @@ class IngestionPipeline:
         # Nome da localidade dinâmico para organização de arquivos
         self.locality_name = SidraLocality.PARANA.name.lower()
 
-    def download_all_raw_data(self):
+    def run(self):
+        """Executa a ingestão completa (download) das três culturas."""
+
+        # 1. Baixar os dados brutos
+        logger.info("Iniciando execução do pipeline de ingestão...")
+        self._download_all_raw_data()
+
+        # 2. Processar os dados brutos
+        logger.info("Processando os dados brutos...")
+        df = self._process_raw_data()
+
+        if df.empty:
+            logger.warning("Nenhum dado processado. Abortando pipeline.")
+            return
+        logger.info("Processamento dos dados brutos finalizado com sucesso!")
+
+        # 3. Salvar o parquet de saída
+        logger.info("Salvando os dados consolidados...")
+        output_path = self.processed_dir / f"pam_{self.locality_name}_consolidado.parquet"
+        df.to_parquet(output_path, index=False, engine="pyarrow")
+        logger.info(f"Dados consolidados salvos em: {output_path}")
+
+        logger.info("Execução do pipeline finalizada com sucesso!")
+
+    def _download_all_raw_data(self):
         """Etapa 1 da Estratégia A: Baixa os dados brutos e salva em JSON locais."""
         for crop in SidraCrops:
             crop_name = crop.name.lower()
@@ -59,7 +83,7 @@ class IngestionPipeline:
                 logger.error(f"Erro no download da cultura {crop_name}: {e}")
                 raise e
 
-    def process_raw_data(self) -> pd.DataFrame:
+    def _process_raw_data(self) -> pd.DataFrame:
         """Limpa, sanitiza valores especiais, pivota as tabelas e consolida as culturas."""
         variables_mapping = {v.value: v.name.lower() for v in SidraVariables}
 
@@ -134,30 +158,6 @@ class IngestionPipeline:
         location = SidraLocality.PARANA.value
 
         return f"t/{table}/p/{period}/v/{variables}/n6/{location}/c782/{crop_code}"
-
-    def run(self):
-        """Executa a ingestão completa (download) das três culturas."""
-
-        # 1. Baixar os dados brutos
-        logger.info("Iniciando execução do pipeline de ingestão...")
-        self.download_all_raw_data()
-
-        # 2. Processar os dados brutos
-        logger.info("Processando os dados brutos...")
-        df = self.process_raw_data()
-
-        if df.empty:
-            logger.warning("Nenhum dado processado. Abortando pipeline.")
-            return
-        logger.info("Processamento dos dados brutos finalizado com sucesso!")
-
-        # 3. Salvar o parquet de saída
-        logger.info("Salvando os dados consolidados...")
-        output_path = self.processed_dir / f"pam_{self.locality_name}_consolidado.parquet"
-        df.to_parquet(output_path, index=False, engine="pyarrow")
-        logger.info(f"Dados consolidados salvos em: {output_path}")
-
-        logger.info("Execução do pipeline finalizada com sucesso!")
 
 
 if __name__ == "__main__":

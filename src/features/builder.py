@@ -25,79 +25,19 @@ class FeatureBuilder:
     def __init__(self, processed_data_path: Path):
         self.data_path = processed_data_path
 
-    def load_data(self) -> pd.DataFrame:
-        """Carrega a base consolidada Parquet."""
-        logger.info(f"Carregando dados consolidados de: {self.data_path}")
-        return pd.read_parquet(self.data_path)
+    def run(self) -> Path:
+        """Executa o pipeline de features completo e salva em arquivo Parquet."""
+        df_features = self._build_features()
 
-    def calculate_slope(self, series: pd.Series) -> float:
-        """
-        Calcula a inclinação linear da série histórica (Slope).
-        Utiliza o índice da série (ano) como variável independente.
-        """
-        y = series.astype(float).values
-        if len(y) < 2 or np.all(np.isnan(y)):
-            return 0.0
+        output_path = self.data_path.parent / "pam_parana_features.parquet"
+        logger.info(f"Salvando features consolidadas em: {output_path}")
+        df_features.to_parquet(output_path, index=False, engine="pyarrow")
+        logger.info("Execução da Engenharia de Features concluída com sucesso!")
+        return output_path
 
-        x = series.index.astype(float).values
-
-        # Remove eventuais nulos de X e Y
-        mask = ~np.isnan(y) & ~np.isnan(x)
-        if np.sum(mask) < 2:
-            return 0.0
-
-        slope, _ = np.polyfit(x[mask], y[mask], 1)
-        return float(slope)
-
-    def calculate_cagr(self, series: pd.Series) -> float:
-        """
-        Calcula a taxa de crescimento anual composta (CAGR) entre o primeiro e último ano
-        com dados maiores que zero, usando o índice da série (ano) para o número de anos decorridos.
-        """
-        # Filtra valores maiores que zero, remove NaNs e ordena pelo ano (índice)
-        valid_series = series[series > 0].dropna().sort_index()
-        if len(valid_series) < 2:
-            return 0.0
-
-        v_ini = valid_series.iloc[0]
-        v_fin = valid_series.iloc[-1]
-
-        y_ini = int(valid_series.index[0])
-        y_fin = int(valid_series.index[-1])
-
-        n_years = y_fin - y_ini
-
-        if n_years <= 0 or v_ini <= 0:
-            return 0.0
-
-        cagr = (v_fin / v_ini) ** (1.0 / n_years) - 1.0
-        return float(cagr)
-
-    def calculate_volatility(self, series: pd.Series) -> float:
-        """
-        Calcula o Coeficiente de Variação (CV) da série histórica de forma segura.
-        Mantido em decimal para consistência no KMeans.
-        """
-        # Remove NaNs logo no início para garantir que Mean e Std usem os mesmos dados
-        clean_series = series.dropna().astype(float)
-        if len(clean_series) < 2:
-            return 0.0
-
-        mean_val = clean_series.mean()
-
-        # Evita divisão por zero ou por valores extremamente próximos de zero (ex: 0.0000001)
-        # que fariam o CV explodir e distorcer o KMeans
-        if abs(mean_val) < 1e-6:
-            return 0.0
-
-        std_val = clean_series.std()
-        cv = std_val / mean_val
-
-        return 0.0 if np.isnan(cv) else float(cv)
-
-    def build_features(self) -> pd.DataFrame:
+    def _build_features(self) -> pd.DataFrame:
         """Gera as features agregadas por município e cultura."""
-        df = self.load_data()
+        df = self._load_data()
 
         logger.info("Calculando Market Share e Risco Climático por ano...")
 
@@ -134,12 +74,12 @@ class FeatureBuilder:
             yield_series = pd.Series(group["rendimento_medio"].values, index=group["ano"].values)
 
             # Volatilidade (Coeficiente de Variação) da produção
-            cv_prod = self.calculate_volatility(prod_series)
+            cv_prod = self._calculate_volatility(prod_series)
 
             # CAGR e Slope
-            cagr_prod = self.calculate_cagr(prod_series)
-            cagr_yield = self.calculate_cagr(yield_series)
-            slope_prod = self.calculate_slope(prod_series)
+            cagr_prod = self._calculate_cagr(prod_series)
+            cagr_yield = self._calculate_cagr(yield_series)
+            slope_prod = self._calculate_slope(prod_series)
             slope_prod_norm = slope_prod / mean_prod if mean_prod > 0 else 0.0
 
             # Médias de market share e perda de área
@@ -169,15 +109,75 @@ class FeatureBuilder:
         logger.info(f"Feature engineering finalizado. Total de registros gerados: {len(df_features)}")
         return df_features
 
-    def run(self) -> Path:
-        """Executa o pipeline de features completo e salva em arquivo Parquet."""
-        df_features = self.build_features()
+    def _load_data(self) -> pd.DataFrame:
+        """Carrega a base consolidada Parquet."""
+        logger.info(f"Carregando dados consolidados de: {self.data_path}")
+        return pd.read_parquet(self.data_path)
 
-        output_path = self.data_path.parent / "pam_parana_features.parquet"
-        logger.info(f"Salvando features consolidadas em: {output_path}")
-        df_features.to_parquet(output_path, index=False, engine="pyarrow")
-        logger.info("Execução da Engenharia de Features concluída com sucesso!")
-        return output_path
+    def _calculate_slope(self, series: pd.Series) -> float:
+        """
+        Calcula a inclinação linear da série histórica (Slope).
+        Utiliza o índice da série (ano) como variável independente.
+        """
+        y = series.astype(float).values
+        if len(y) < 2 or np.all(np.isnan(y)):
+            return 0.0
+
+        x = series.index.astype(float).values
+
+        # Remove eventuais nulos de X e Y
+        mask = ~np.isnan(y) & ~np.isnan(x)
+        if np.sum(mask) < 2:
+            return 0.0
+
+        slope, _ = np.polyfit(x[mask], y[mask], 1)
+        return float(slope)
+
+    def _calculate_cagr(self, series: pd.Series) -> float:
+        """
+        Calcula a taxa de crescimento anual composta (CAGR) entre o primeiro e último ano
+        com dados maiores que zero, usando o índice da série (ano) para o número de anos decorridos.
+        """
+        # Filtra valores maiores que zero, remove NaNs e ordena pelo ano (índice)
+        valid_series = series[series > 0].dropna().sort_index()
+        if len(valid_series) < 2:
+            return 0.0
+
+        v_ini = valid_series.iloc[0]
+        v_fin = valid_series.iloc[-1]
+
+        y_ini = int(valid_series.index[0])
+        y_fin = int(valid_series.index[-1])
+
+        n_years = y_fin - y_ini
+
+        if n_years <= 0 or v_ini <= 0:
+            return 0.0
+
+        cagr = (v_fin / v_ini) ** (1.0 / n_years) - 1.0
+        return float(cagr)
+
+    def _calculate_volatility(self, series: pd.Series) -> float:
+        """
+        Calcula o Coeficiente de Variação (CV) da série histórica de forma segura.
+        Mantido em decimal para consistência no KMeans.
+        """
+        # Remove NaNs logo no início para garantir que Mean e Std usem os mesmos dados
+        clean_series = series.dropna().astype(float)
+        if len(clean_series) < 2:
+            return 0.0
+
+        mean_val = clean_series.mean()
+
+        # Evita divisão por zero ou por valores extremamente próximos de zero (ex: 0.0000001)
+        # que fariam o CV explodir e distorcer o KMeans
+        if abs(mean_val) < 1e-6:
+            return 0.0
+
+        std_val = clean_series.std()
+        cv = std_val / mean_val
+
+        return 0.0 if np.isnan(cv) else float(cv)
 
 
 if __name__ == "__main__":
