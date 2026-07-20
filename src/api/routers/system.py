@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException
+
 from src.api.schemas import HealthResponse, MetadataResponse
 from src.api.services import DataService
 
 router = APIRouter(tags=["System"])
+
 
 @router.get("/health", response_model=HealthResponse)
 async def get_health():
@@ -10,6 +12,7 @@ async def get_health():
     if not DataService.get_health_status():
         raise HTTPException(status_code=503, detail="API inicializando ou sem dados carregados.")
     return {"status": "ok"}
+
 
 @router.get("/metadata", response_model=MetadataResponse)
 async def get_metadata():

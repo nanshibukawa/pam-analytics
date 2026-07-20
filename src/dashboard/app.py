@@ -455,10 +455,7 @@ with tab_comercial:
             # Configura layout do duplo eixo Y
             fig_trend.update_layout(
                 title=dict(text=f"Evolução Temporal em {municipio_selecionado}", font=dict(size=24)),
-                xaxis=dict(
-                    title=dict(text="Ano (Safra)", font=dict(size=22)),
-                    tickfont=dict(size=18)
-                ),
+                xaxis=dict(title=dict(text="Ano (Safra)", font=dict(size=22)), tickfont=dict(size=18)),
                 yaxis=dict(
                     title=dict(text="Produção (t)", font=dict(color="#1f77b4", size=22)),
                     tickfont=dict(color="#1f77b4", size=18),
@@ -650,14 +647,8 @@ with tab_risco:
                 y=0.95,
                 yanchor="top",
             ),
-            xaxis=dict(
-                title=dict(font=dict(size=22)),
-                tickfont=dict(size=18)
-            ),
-            yaxis=dict(
-                title=dict(font=dict(size=22), standoff=25),
-                tickfont=dict(size=18)
-            ),
+            xaxis=dict(title=dict(font=dict(size=22)), tickfont=dict(size=18)),
+            yaxis=dict(title=dict(font=dict(size=22), standoff=25), tickfont=dict(size=18)),
             legend=dict(font=dict(size=18)),
             margin=dict(t=100, l=120, r=50, b=80),
         )
@@ -710,17 +701,21 @@ with tab_risco:
         ) / 2
 
         # Reordena colunas de forma legível
-        df_filtered_display = df_filtered_risk[
-            [
-                "municipio_nome",
-                "prod_media",
-                "rendimento_medio_med",
-                "volatilidade_prod",
-                "perda_area_media",
-                "Risco Score",
-                "cluster",
+        df_filtered_display = (
+            df_filtered_risk[
+                [
+                    "municipio_nome",
+                    "prod_media",
+                    "rendimento_medio_med",
+                    "volatilidade_prod",
+                    "perda_area_media",
+                    "Risco Score",
+                    "cluster",
+                ]
             ]
-        ].sort_values(by="Risco Score", ascending=False).copy()
+            .sort_values(by="Risco Score", ascending=False)
+            .copy()
+        )
 
         # Mapeia rótulo numérico do cluster para o nome comercial correspondente
         df_filtered_display["cluster"] = df_filtered_display["cluster"].map(CLUSTER_NAMES)
@@ -901,14 +896,8 @@ with tab_clusters:
             height=550,
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=18)),
             font=dict(size=20),
-            xaxis=dict(
-                title=dict(font=dict(size=22)),
-                tickfont=dict(size=18)
-            ),
-            yaxis=dict(
-                title=dict(font=dict(size=22)),
-                tickfont=dict(size=18)
-            ),
+            xaxis=dict(title=dict(font=dict(size=22)), tickfont=dict(size=18)),
+            yaxis=dict(title=dict(font=dict(size=22)), tickfont=dict(size=18)),
         )
         st.plotly_chart(fig_clusters, width="stretch")
 
