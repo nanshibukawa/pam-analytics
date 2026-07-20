@@ -23,7 +23,10 @@ async def get_ranking(
     ano: int = Query(..., description="Ano da safra para ranqueamento."),
     metric: str = Query(
         "quantidade_produzida",
-        description="Métrica para ordenação (quantidade_produzida, area_plantada, valor_producao, rendimento_medio)",
+        description=(
+            "Métrica para ordenação (quantidade_produzida, area_plantada, "
+            "area_colhida, valor_producao, rendimento_medio)"
+        ),
     ),
 ):
     """Retorna o ranking municipal baseado em produto, ano e uma métrica selecionada."""

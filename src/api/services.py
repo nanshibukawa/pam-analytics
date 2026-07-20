@@ -129,17 +129,25 @@ class DataService:
         if df is None or df.empty:
             raise HTTPException(status_code=404, detail="Dados históricos não carregados na API.")
 
-        df_filtered = df.copy()
+        if produto is not None:
+            produto_clean = produto.lower().strip()
+            if "valid_produtos" in data_store and produto_clean not in data_store["valid_produtos"]:
+                valid_prods = ", ".join(sorted(data_store["valid_produtos"]))
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Produto inválido: '{produto}'. Escolha entre: {valid_prods}",
+                )
+
+        df_filtered = df
         if municipio_codigo is not None:
             df_filtered = df_filtered[df_filtered["municipio_codigo"] == municipio_codigo]
         if produto is not None:
-            produto_clean = produto.lower().strip()
             df_filtered = df_filtered[df_filtered["produto"] == produto_clean]
 
         if df_filtered.empty:
             return []
 
-        df_filtered = df_filtered.fillna(0.0)
+        df_filtered = df_filtered.copy().fillna(0.0)
         return df_filtered.to_dict(orient="records")
 
     @staticmethod
@@ -230,6 +238,13 @@ class DataService:
             raise HTTPException(status_code=404, detail="Dados de clusters não carregados ou não processados na API. ")
 
         produto_clean = produto.lower().strip()
+        if "valid_produtos" in data_store and produto_clean not in data_store["valid_produtos"]:
+            valid_prods = ", ".join(sorted(data_store["valid_produtos"]))
+            raise HTTPException(
+                status_code=400,
+                detail=f"Produto inválido: '{produto}'. Escolha entre: {valid_prods}",
+            )
+
         df_filtered = df_clusters[df_clusters["produto"] == produto_clean].copy()
         if df_filtered.empty:
             raise HTTPException(status_code=404, detail=f"Nenhum cluster encontrado para a cultura: {produto_clean}")
