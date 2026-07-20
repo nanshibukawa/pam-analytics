@@ -30,6 +30,7 @@ app.include_router(analytics.router)
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "src.api.main:app",
         host="0.0.0.0",

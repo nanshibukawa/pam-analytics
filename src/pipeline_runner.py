@@ -11,11 +11,11 @@ BASE_PATH = Path(__file__).resolve().parent.parent
 if str(BASE_PATH) not in sys.path:
     sys.path.append(str(BASE_PATH))
 
-from src.ingestion.client import SidraClient
-from src.ingestion.pipeline import IngestionPipeline
-from src.features.builder import FeatureBuilder
-from src.models.clusterer import AgriculturalClusterer
-from src.utils.logging_config import setup_logging
+from src.features.builder import FeatureBuilder  # noqa: E402
+from src.ingestion.client import SidraClient  # noqa: E402
+from src.ingestion.pipeline import IngestionPipeline  # noqa: E402
+from src.models.clusterer import AgriculturalClusterer  # noqa: E402
+from src.utils.logging_config import setup_logging  # noqa: E402
 
 logger = setup_logging()
 

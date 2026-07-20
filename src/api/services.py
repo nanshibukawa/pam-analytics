@@ -1,9 +1,11 @@
-from src.utils.logging_config import setup_logging
 from pathlib import Path
-from typing import Dict, Any, List, Optional
+from typing import Any, Dict, List, Optional
+
 import pandas as pd
 from fastapi import HTTPException
+
 from src.pipeline_runner import run_full_pipeline
+from src.utils.logging_config import setup_logging
 
 logger = setup_logging()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -12,6 +14,7 @@ CLUSTERS_PATH = BASE_DIR / "data" / "processed" / "clusters_final.parquet"
 
 # Cache em memória global
 data_store = {}
+
 
 def load_data_to_store():
     """Carrega os arquivos Parquet de produção para a memória cache do servidor.
@@ -25,8 +28,11 @@ def load_data_to_store():
     logger.info("Iniciando carregamento de dados em memória...")
 
     if not CONSOLIDADO_PATH.exists() or not CLUSTERS_PATH.exists():
-        logger.warning("Bases de dados de produção não encontradas localmente. Iniciando execução automática do pipeline ponta a ponta...")
-        
+        logger.warning(
+            "Bases de dados de produção não encontradas localmente. "
+            "Iniciando execução automática do pipeline ponta a ponta..."
+        )
+
         try:
             run_full_pipeline(BASE_DIR)
         except Exception as e:
@@ -47,36 +53,34 @@ def load_data_to_store():
     produtos = sorted(df_consolidado["produto"].dropna().unique().tolist())
     anos = sorted(df_consolidado["ano"].dropna().unique().tolist())
 
-    df_mun = df_consolidado[["municipio_codigo", "municipio_nome"]].dropna().drop_duplicates().sort_values("municipio_nome")
+    df_mun = (
+        df_consolidado[["municipio_codigo", "municipio_nome"]].dropna().drop_duplicates().sort_values("municipio_nome")
+    )
     municipios = [
-        {"codigo": int(row["municipio_codigo"]), "nome": row["municipio_nome"]}
-        for _, row in df_mun.iterrows()
+        {"codigo": int(row["municipio_codigo"]), "nome": row["municipio_nome"]} for _, row in df_mun.iterrows()
     ]
 
-    data_store["metadata"] = {
-        "produtos": produtos,
-        "anos": anos,
-        "municipios": municipios
-    }
+    data_store["metadata"] = {"produtos": produtos, "anos": anos, "municipios": municipios}
     data_store["valid_produtos"] = set(produtos)
     data_store["valid_anos"] = set(anos)
 
     logger.info("Carregamento e pré-computação concluídos com sucesso!")
+
 
 def clear_data_store():
     """Limpa a memória do servidor."""
     data_store.clear()
     logger.info("Dados limpos da memória.")
 
+
 class DataService:
     @staticmethod
-
     def get_health_status() -> bool:
-        """Verifica se as bases de dados de produção foram carregadas em cache com sucesso.                                                                                                                       
-                                                                                                                                                                                                                  
-        Returns:                                                                                                                                                                                                  
-            bool: True se ambos os DataFrames estiverem em memória e populados,                                                                                                                                   
-                  False caso contrário.                                                                                                                                                                           
+        """Verifica se as bases de dados de produção foram carregadas em cache com sucesso.
+
+        Returns:
+            bool: True se ambos os DataFrames estiverem em memória e populados,
+                  False caso contrário.
         """
 
         consolidado = data_store.get("consolidado")
@@ -103,25 +107,24 @@ class DataService:
             raise HTTPException(status_code=404, detail="Dados históricos não carregados na API.")
         return metadata
 
-
     @staticmethod
     def get_series(municipio_codigo: Optional[int] = None, produto: Optional[str] = None) -> List[Dict[str, Any]]:
-        """Obtém a série histórica de produção filtrada por município e/ou produto.                                                                                                                                                                       
-                                                                                                                                                                                                                                                              
-            Realiza a consulta sobre a base consolidada, tratando valores nulos e                                                                                                                                                                             
-            convertendo as linhas em dicionários prontos para serialização.                                                                                                                                                                                   
-                                                                                                                                                                                                                                                              
-            Args:                                                                                                                                                                                                                                             
-                municipio_codigo (Optional[int]): Código IBGE do município para filtro.                                                                                                                                                                       
-                produto (Optional[str]): Nome da cultura agrícola (soja, milho, trigo).                                                                                                                                                                       
-                                                                                                                                                                                                                                                              
-            Returns:                                                                                                                                                                                                                                          
-                List[Dict[str, Any]]: Lista de dicionários representando a série temporal.                                                                                                                                                                    
-                                                                                                                                                                                                                                                              
-            Raises:                                                                                                                                                                                                                                           
-                HTTPException: Se a base de dados consolidada não estiver carregada em memória.                                                                                                                                                               
+        """Obtém a série histórica de produção filtrada por município e/ou produto.
+
+        Realiza a consulta sobre a base consolidada, tratando valores nulos e
+        convertendo as linhas em dicionários prontos para serialização.
+
+        Args:
+            municipio_codigo (Optional[int]): Código IBGE do município para filtro.
+            produto (Optional[str]): Nome da cultura agrícola (soja, milho, trigo).
+
+        Returns:
+            List[Dict[str, Any]]: Lista de dicionários representando a série temporal.
+
+        Raises:
+            HTTPException: Se a base de dados consolidada não estiver carregada em memória.
         """
-        
+
         df = data_store.get("consolidado")
         if df is None or df.empty:
             raise HTTPException(status_code=404, detail="Dados históricos não carregados na API.")
@@ -174,15 +177,17 @@ class DataService:
 
         produto_clean = produto.lower().strip()
         if "valid_produtos" in data_store and produto_clean not in data_store["valid_produtos"]:
+            valid_prods = ", ".join(sorted(data_store["valid_produtos"]))
             raise HTTPException(
                 status_code=400,
-                detail=f"Produto inválido: '{produto}'. Escolha entre: {', '.join(sorted(data_store['valid_produtos']))}"
+                detail=f"Produto inválido: '{produto}'. Escolha entre: {valid_prods}",
             )
 
         if "valid_anos" in data_store and ano not in data_store["valid_anos"]:
+            valid_years = ", ".join(map(str, sorted(data_store["valid_anos"])))
             raise HTTPException(
                 status_code=400,
-                detail=f"Ano inválido: {ano}. Escolha entre: {', '.join(map(str, sorted(data_store['valid_anos'])))}"
+                detail=f"Ano inválido: {ano}. Escolha entre: {valid_years}",
             )
 
         df_filtered = df[(df["produto"] == produto_clean) & (df["ano"] == ano)].copy()
@@ -201,25 +206,24 @@ class DataService:
 
     @staticmethod
     def get_clusters(produto: str) -> Dict[str, Any]:
+        """Obtém os municípios rotulados e calcula os perfis médios dos clusters para uma cultura.
 
-        """Obtém os municípios rotulados e calcula os perfis médios dos clusters para uma cultura.                                                                                                            
-                                                                                                                                                                                                                  
-            Filtra os dados da modelagem para a cultura informada, extrai as métricas de                                                                                                                          
-            clusterização de cada município e calcula dinamicamente a média das variáveis                                                                                                                         
-            de modelagem agrupadas por cluster (perfilamento em tempo real).                                                                                                                                      
-                                                                                                                                                                                                                  
-            Args:                                                                                                                                                                                                 
-                produto (str): Cultura agrícola analisada (soja, milho, trigo).                                                                                                                                   
-                                                                                                                                                                                                                  
-            Returns:                                                                                                                                                                                              
-                Dict[str, Any]: Dicionário contendo duas listas:                                                                                                                                                  
-                    - 'clusters': Lista com a classificação e indicadores individuais de cada município.                                                                                                          
-                    - 'perfis': Resumo médio estatístico característico de cada um dos clusters (0 a K-1).                                                                                                        
-                                                                                                                                                                                                                  
-            Raises:                                                                                                                                                                                               
-                HTTPException: Se os dados de clusters não estiverem carregados na API (404)                                                                                                                      
-                    ou se a cultura informada não possuir dados de cluster processados (404).                                                                                                                     
-            """
+        Filtra os dados da modelagem para a cultura informada, extrai as métricas de
+        clusterização de cada município e calcula dinamicamente a média das variáveis
+        de modelagem agrupadas por cluster (perfilamento em tempo real).
+
+        Args:
+            produto (str): Cultura agrícola analisada (soja, milho, trigo).
+
+        Returns:
+            Dict[str, Any]: Dicionário contendo duas listas:
+                - 'clusters': Lista com a classificação e indicadores individuais de cada município.
+                - 'perfis': Resumo médio estatístico característico de cada um dos clusters (0 a K-1).
+
+        Raises:
+            HTTPException: Se os dados de clusters não estiverem carregados na API (404)
+                ou se a cultura informada não possuir dados de cluster processados (404).
+        """
 
         df_clusters = data_store.get("clusters")
         if df_clusters is None or df_clusters.empty:
@@ -233,11 +237,17 @@ class DataService:
         df_filtered = df_filtered.fillna(0.0)
         clusters_list = df_filtered.to_dict(orient="records")
 
-        feature_cols = ["prod_media", "rendimento_medio_med", "cagr_producao", 
-        "cagr_rendimento", "trend_slope_producao", "volatilidade_prod", 
-        "perda_area_media"]
+        feature_cols = [
+            "prod_media",
+            "rendimento_medio_med",
+            "cagr_producao",
+            "cagr_rendimento",
+            "trend_slope_producao",
+            "volatilidade_prod",
+            "perda_area_media",
+        ]
 
         df_profiles = df_filtered.groupby("cluster")[feature_cols].mean().reset_index()
         profiles_list = df_profiles.to_dict(orient="records")
 
-        return {"clusters": clusters_list, "perfis": profiles_list}  
+        return {"clusters": clusters_list, "perfis": profiles_list}
