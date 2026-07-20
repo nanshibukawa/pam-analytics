@@ -75,14 +75,22 @@ class FeatureBuilder:
 
     def calculate_volatility(self, series: pd.Series) -> float:
         """
-        Calcula o Coeficiente de Variação (CV) da série histórica.
-        Mantido em decimal (sem multiplicar por 100) para consistência no KMeans.
+        Calcula o Coeficiente de Variação (CV) da série histórica de forma segura.
+        Mantido em decimal para consistência no KMeans.
         """
-        mean_val = series.mean()
-        if mean_val <= 0 or np.isnan(mean_val):
+        # Remove NaNs logo no início para garantir que Mean e Std usem os mesmos dados
+        clean_series = series.dropna().astype(float)
+        if len(clean_series) < 2:
             return 0.0
 
-        std_val = series.astype(float).std()
+        mean_val = clean_series.mean()
+
+        # Evita divisão por zero ou por valores extremamente próximos de zero (ex: 0.0000001)
+        # que fariam o CV explodir e distorcer o KMeans
+        if abs(mean_val) < 1e-6:
+            return 0.0
+
+        std_val = clean_series.std()
         cv = std_val / mean_val
 
         return 0.0 if np.isnan(cv) else float(cv)
